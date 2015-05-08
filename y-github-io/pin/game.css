@@ -1,4 +1,11 @@
 /************ common ************/
+* {
+	user-select: none; /* CSS3 */
+	-moz-user-select: none; /* Firefox */
+	-webkit-user-select: none; /* SafariÅAChromeÇ»Ç« */
+	-ms-user-select: none; /* IE10Ç©ÇÁÇÁÇµÇ¢ */
+}
+
 html,body {
 	margin: 0;
 	padding: 0;
