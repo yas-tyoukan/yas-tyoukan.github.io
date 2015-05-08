@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<!-- コンテンツ幅に合わせる場合、コンテンツの数値(width)を指定する。-->
+<!-- スケールをコンテンツに合わせる場合、minimum-scale=1, maximum-scale=1 を指定する。-->
+<meta name="viewport" content="width=device-width, initial-scale=1 user-scalable=none">
+<!-- 全画面表示化するかどうかの設定。ホーム画面から起動したときしか効かない。 -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<!-- ライブラリのロード -->
+<link rel="stylesheet" href="../res/lib/h5/h5.css" />
+<script src="../res/lib/jquery/jquery.js"></script>
+<script src="../res/lib/h5/h5.dev.js"></script>
+<!-- ユーザCSS・JS -->
+<link rel="stylesheet" href="game.css" />
+<script src="game.js"></script>
+<title></title>
+</head>
+<body>
+	<div class="container">
+		<div class="scene" data-state="main">
+			<div class="header">
+				<div class="horizonal-group">
+					<!--
+				<div class="btn btn-icon btn-tweet"></div>
+				 -->
+				</div>
+			</div>
+			<div class="vertical-group">
+				<div class="btn btn-wide start-btn changeStateBtn"
+					data-state-link="game">スタート</div>
+			</div>
+		</div>
+		<div class="scene" data-state="game">
+			<div class="board-pin">
+				<svg></svg>
+				<div class="base"></div>
+				<div class="controlls">
+					<div class="left-btn"><span class="leftbtn-label btn-label">←</span></div>
+					<div class="right-btn"><span class="rightbtn-label btn-label">→</span></div>
+				</div>
+			</div>
+		</div>
+		<div class="overlay hidden gameover">
+			<div class="result">
+				スコア：<span class="score"></span>
+			</div>
+			<div class="btn btn-wide start-btn changeStateBtn retry"
+				data-state-link="game">リトライ</div>
+			<div class="btn btn-wide start-btn changeStateBtn"
+				data-state-link="main">TOPへ</div>
+		</div>
+	</div>
+</body>
+</html>

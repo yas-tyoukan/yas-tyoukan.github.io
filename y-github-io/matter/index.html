@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<!-- コンテンツ幅に合わせる場合、コンテンツの数値(width)を指定する。-->
+<!-- スケールをコンテンツに合わせる場合、minimum-scale=1, maximum-scale=1 を指定する。-->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 全画面表示化するかどうかの設定。ホーム画面から起動したときしか効かない。 -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<!-- ライブラリのロード -->
+<link href="../res/lib/h5/h5.css" />
+<script src="../res/lib/jquery/jquery.js"></script>
+<script src="../res/lib/h5/h5.dev.js"></script>
+<script src="../res/lib/matter/matter-0.8.0.js"></script>
+<!-- ユーザCSS・JS -->
+<script src="t.js"></script>
+<style>
+html,body,.tsumu {
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.tsumu>* {
+	height: 100%;
+}
+
+/** ゲーム画面 **/
+.tsumu .header {
+	height: 20%;
+	width: 100%;
+}
+
+.tsumu .main {
+	text-align: center;
+	height: 60%;
+	width: 100%;
+}
+
+.tsumu .footer {
+	height: 20%;
+	width: 100%;
+}
+</style>
+<title></title>
+</head>
+<body>
+	<div class="tsumu">
+		<div class="play">
+			<div class="header">へっだ</div>
+			<div class="main"></div>
+			<div class="footer">ふった</div>
+		</div>
+	</div>
+</body>
+</html>

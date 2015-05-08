@@ -1,0 +1,4 @@
+.screen {
+	/** スクリーン要素は準備できるまで非表示 **/
+	visibility: hidden;
+}

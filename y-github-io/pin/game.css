@@ -1,0 +1,133 @@
+/************ common ************/
+html,body {
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.container {
+	height: 100%;
+	width: 100%;
+	position: relative;
+	box-sizing: border-box;
+	overflow: hidden;
+	margin: auto;
+}
+
+.scene,.overlay {
+	height: 100%;
+	width: 100%;
+	box-sizing: border-box;
+	position: absolute;
+	top: 0;
+	left: 0;
+	transition: display 0.1s ease-in-out
+}
+
+.overlay {
+	background-color: rgba(0, 0, 0, 0.2);
+}
+
+.result {
+	background-color: #fff;
+}
+
+.hidden {
+	display: none !important;
+}
+
+.btn {
+	border: 1px solid #fc2;
+	background-color: #fff;
+	cursor: pointer;
+}
+
+.controlls {
+	position: absolute;
+	bottom: 0;
+	width: 100%;
+	color: #fff;
+	height: 100%;
+	vertical-align: bottom;
+	cursor: pointer;
+}
+
+.controlls * {
+	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+.controlls .left-btn {
+	float: left;
+	display: inline-block;
+	width: 50%;
+	height: 100%;
+}
+
+.controlls .right-btn {
+	float: right;
+	display: inline-block;
+	width: 50%;
+	text-align: right;
+	height: 100%;
+}
+
+.controlls .clicked .btn-label {
+	color: rgba(255, 255, 255, 0.9);
+}
+
+.controlls .btn-label {
+	font-size: 3em;
+	position: absolute;
+	display: block;
+	bottom: 0;
+	color: rgba(255, 255, 255, 0.7);
+}
+
+.controlls .rightbtn-label.btn-label {
+	right: 0;
+}
+
+/************ pin ************/
+[data-state="game"] {
+	height: 100%;
+	position: relative;
+}
+
+.board-pin {
+	height: 100%;
+	background-color: #cef;
+}
+
+.board-pin .base {
+	background-color: #702B00;
+	box-sizing: border-box;
+	height: 5%;
+	width: 80%;
+	position: relative;
+	top: 95%;
+	margin: auto;
+}
+
+.board-pin svg {
+	position: absolute;
+	height: 100%;
+	width: 100%;
+}
+
+.board-pin svg .pin-body {
+	stroke: #aaa;
+	stroke-width: 5;
+	stroke-linecap: round;
+	box-shadow: 0 0 4px #F00, 0 0 12px #000, 5px 5px 5px #000;
+}
+
+.board-pin svg .pin-head {
+	fill: #c00;
+}
+
+.board-pin svg .enemy {
+	stroke: #ccc;
+	stroke-width: 3;
+	stroke-linecap: butt;
+}
