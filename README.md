@@ -1,4 +1,8 @@
+作ったもの置場
+
 twitter: [tyoukan__](http://twitter.com/tyoukan__)
+
+なにかございましたらtwitterまたはissue等でご連絡ください。
 
 #プログラム
 ##ゲーム
