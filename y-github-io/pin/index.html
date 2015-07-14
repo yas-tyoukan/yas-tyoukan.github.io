@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <!-- コンテンツ幅に合わせる場合、コンテンツの数値(width)を指定する。-->
 <!-- スケールをコンテンツに合わせる場合、minimum-scale=1, maximum-scale=1 を指定する。-->
-<meta name="viewport" content="width=device-width, initial-scale=1 user-scalable=none">
+<meta name="viewport"
+	content="width=device-width, initial-scale=1 user-scalable=none">
 <!-- 全画面表示化するかどうかの設定。ホーム画面から起動したときしか効かない。 -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <!-- ライブラリのロード -->
@@ -13,14 +14,19 @@
 <script src="../res/lib/h5/h5.dev.js"></script>
 <!-- トラッキングコード -->
 <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	(function(i, s, o, g, r, a, m) {
+		i['GoogleAnalyticsObject'] = r;
+		i[r] = i[r] || function() {
+			(i[r].q = i[r].q || []).push(arguments)
+		}, i[r].l = 1 * new Date();
+		a = s.createElement(o), m = s.getElementsByTagName(o)[0];
+		a.async = 1;
+		a.src = g;
+		m.parentNode.insertBefore(a, m)
+	})(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-31470545-1', 'auto');
-  ga('send', 'pageview');
-
+	ga('create', 'UA-31470545-1', 'auto');
+	ga('send', 'pageview');
 </script>
 <!-- ユーザCSS・JS -->
 <link rel="stylesheet" href="game.css" />
@@ -40,6 +46,8 @@
 			<div class="vertical-group">
 				<div class="btn btn-wide start-btn changeStateBtn"
 					data-state-link="game">スタート</div>
+				<div class="btn btn-wide start-btn changeStateBtn"
+					data-state-link="explain">説明</div>
 			</div>
 		</div>
 		<div class="scene" data-state="game">
@@ -47,10 +55,23 @@
 				<svg></svg>
 				<div class="base"></div>
 				<div class="controlls">
-					<div class="left-btn"><span class="leftbtn-label btn-label">←</span></div>
-					<div class="right-btn"><span class="rightbtn-label btn-label">→</span></div>
+					<div class="left-btn">
+						<span class="leftbtn-label btn-label">←</span>
+					</div>
+					<div class="right-btn">
+						<span class="rightbtn-label btn-label">→</span>
+					</div>
 				</div>
 			</div>
+		</div>
+		<div class="scene explainScene" data-state="explain">
+			<div class="btn btn-wide start-btn changeStateBtn"
+				data-state-link="main">TOPへ</div>
+			<p>時は199X年！</p>
+			<p>待ち針が立ち上がった！</p>
+			<p>空から降ってくる野蛮な針を避けて世紀末を生き延びろ！</p>
+			<p>画面をタッチして左右に動けるぞ！</p>
+			<p>キーボードの左右キーでもいけるぞ！</p>
 		</div>
 		<div class="overlay hidden gameover">
 			<div class="result">
@@ -58,6 +79,22 @@
 			</div>
 			<div class="btn btn-wide start-btn changeStateBtn retry"
 				data-state-link="game">リトライ</div>
+			<div class="btn btn-wide">
+				<a href="https://twitter.com/share" class="twitter-share-button"
+					data-text="" data-size="large">スコアをツイート</a>
+				<script>
+					!function(d, s, id) {
+						var js, fjs = d.getElementsByTagName(s)[0], p = /^http:/.test(d.location) ? 'http'
+								: 'https';
+						if (!d.getElementById(id)) {
+							js = d.createElement(s);
+							js.id = id;
+							js.src = p + '://platform.twitter.com/widgets.js';
+							fjs.parentNode.insertBefore(js, fjs);
+						}
+					}(document, 'script', 'twitter-wjs');
+				</script>
+			</div>
 			<div class="btn btn-wide start-btn changeStateBtn"
 				data-state-link="main">TOPへ</div>
 		</div>
