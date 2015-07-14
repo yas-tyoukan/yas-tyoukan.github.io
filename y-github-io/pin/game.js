@@ -55,6 +55,15 @@
 		return $elem;
 	}
 
+	function refreshTweetContent(msg) {
+		var $wrapper = $('.tweetBtnWrapper');
+		$wrapper.empty();
+		$wrapper
+				.append('<a href="https://twitter.com/share" class="twitter-share-button" data-text="'
+						+ msg
+						+ '" data-count="vertical">ツイートする</a><script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?"http":"https";if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+"://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}else{twttr.widgets.load();}}(document, "script", "twitter-wjs");</script>');
+	}
+
 	// globalに公開
 	h5.u.obj.expose('pin', {
 		consts: {
@@ -62,7 +71,8 @@
 		},
 		utils: {
 			adjustScreen: adjustScreen,
-			createSvgDrawingElement: createSvgDrawingElement
+			createSvgDrawingElement: createSvgDrawingElement,
+			refreshTweetContent: refreshTweetContent
 		}
 	});
 })();
@@ -482,8 +492,9 @@
 					// ゲームオーバ画面表示
 					$('.score').text(this._score);
 					// tweet内容を設定
-					$('.twitter-share-button').data('text',
-							h5.u.str.format('待ち針を{0}F(世紀末単位)生き延びさせました！', this._score));
+					var msg = '待ち針を{0}F(世紀末単位)生き延びさせました！';
+					pin.utils.refreshTweetContent(h5.u.str.format(msg, this._score));
+
 					this.trigger('overlay', 'gameover');
 				}
 			});
