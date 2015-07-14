@@ -30,7 +30,7 @@ html,body {
 	position: absolute;
 	top: 0;
 	left: 0;
-	transition: display 0.1s ease-in-out
+	transition: display 0.1s ease-in-out;
 }
 
 .overlay {
@@ -41,14 +41,26 @@ html,body {
 	display: none !important;
 }
 
+.title {
+	background-color: #2a2a2a;
+	color: #fff;
+	font-size: 2em;
+	font-weight: bold;
+	display: block;
+	width: 100%;
+	text-align: center;
+}
+
 .btn {
 	background-color: #c00;
 	color: #fff;
 	cursor: pointer;
-	margin-top: 1em;
+	margin-top: 10%;
+	display: block;
 	padding: 3px;
 	text-align: center;
 	cursor: pointer;
+	padding: 3px;
 }
 
 .controlls {

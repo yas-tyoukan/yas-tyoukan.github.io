@@ -130,7 +130,7 @@
 		load: function() {
 			console.log(this.__name);
 		}
-	})
+	});
 })();
 
 (function() {
