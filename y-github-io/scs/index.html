@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<!-- コンテンツ幅に合わせる場合、コンテンツの数値(width)を指定する。-->
+<!-- スケールをコンテンツに合わせる場合、minimum-scale=1, maximum-scale=1 を指定する。-->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 全画面表示化するかどうかの設定。ホーム画面から起動したときしか効かない。 -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<!-- ライブラリのロード -->
+<!-- jquery -->
+<!--[if lt IE 9]>
+		<script src="/hifive-res/ext/jquery/jquery-1.js"></script>
+		<![endif]-->
+<!--[if gte IE 9]><!-->
+<script src="/hifive-res/ext/jquery/jquery-2.js"></script>
+<!--<![endif]-->
+
+<!-- bootstrap -->
+<link href="/hifive-res/ext/bootstrap/3.3.4/css/bootstrap.min.css"
+	rel="stylesheet" media="screen">
+<script src="/hifive-res/ext/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+
+<link rel="stylesheet" href="../res/lib/h5/h5.css" />
+<script src="../res/lib/jquery/jquery.js"></script>
+<script src="../res/lib/h5/h5.js"></script>
+<!-- トラッキングコード -->
+<script>
+	(function(i, s, o, g, r, a, m) {
+		i['GoogleAnalyticsObject'] = r;
+		i[r] = i[r] || function() {
+			(i[r].q = i[r].q || []).push(arguments)
+		}, i[r].l = 1 * new Date();
+		a = s.createElement(o), m = s.getElementsByTagName(o)[0];
+		a.async = 1;
+		a.src = g;
+		m.parentNode.insertBefore(a, m)
+	})(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+
+	ga('create', 'UA-65172741-1', 'auto');
+	ga('send', 'pageview');
+</script>
+<!-- ユーザCSS・JS -->
+<link rel="stylesheet" href="index.css" />
+<script src="index.js"></script>
+<title>くそこらスタンプ</title>
+</head>
+<body>
+	<div class="container">
+		<div class="row">
+			<div class="col-xs-12">
+				<div class="main">
+					<nav class="navbar navbar-default">
+						<button class="clearAll btn btn-small navbar-btn">
+							<span class="glyphicon glyphicon glyphicon-question-sign"
+								aria-hidden="true"></span>
+						</button>
+						<button class="clearAll hidden btn btn-small navbar-btn">クリア</button>
+						<button class="changeStamp hidden btn btn-small navbar-btn">変更</button>
+						<button class="saveImage hidden btn btn-small navbar-btn btn-primary">保存</button>
+					</nav>
+					<div class="canvasWrapper">
+						<input class="" accept="image/*" name="img" type="file"
+							data-action="getPicture" />
+						<canvas id="mainCanvas"></canvas>
+						<img id="stampImage">
+					</div>
+					<div class="overlay hidden">
+						<div class="explain"></div>
+						<div class="selectStamp">
+							<div class="header">
+								<span class="stampName"></span>
+								<button class="btn btn-small btn-inverse pull-right">決定</button>
+							</div>
+							<div class="stamplList"></div>
+						</div>
+						<div class="save">
+							<nav class="navbar navbar-default">
+								<button class="closeOverlay btn btn-small navbar-btn">閉じる</button>
+							</nav>
+							<img class="drawingImg">
+							<p>↑の画像を保存してください</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

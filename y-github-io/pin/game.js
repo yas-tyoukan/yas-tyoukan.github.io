@@ -125,15 +125,6 @@
 })();
 
 (function() {
-	h5.core.expose({
-		__name: 'pin.controller.MainController',
-		load: function() {
-			console.log(this.__name);
-		}
-	});
-})();
-
-(function() {
 	/** 仮想幅 */
 	var VW = 320;
 	/** 仮想高さ */
@@ -294,11 +285,11 @@
 				'{.retry} click': function() {
 					this.load();
 				},
-				load: function() {
+				'{rootElement} load': function() {
 					pin.utils.adjustScreen();
 					this.startGame();
 				},
-				unload: function() {
+				'{rootElement} unload': function() {
 				// TODO
 				},
 				startGame: function() {
@@ -502,32 +493,20 @@
 
 (function() {
 	h5.core.expose({
-		__name: 'pin.controller.GameOverController',
-		load: function() {
-			console.log(this.__name);
-		}
-	});
-})();
-
-(function() {
-	h5.core.expose({
 		__name: 'pin.controller.PageController',
-		mainController: pin.controller.MainController,
-		gameController: pin.controller.GameController,
-		gameOverController: pin.controller.GameOverController,
 		stateBoxController: h5.ui.container.StateBox,
-		__meta: {
-			mainController: {
-				rootElement: '[data-state="main"]'
-			},
-			gameController: {
-				rootElement: '[data-state="game"]'
-			},
-			gameOverController: {
-				rootElement: '.gameover'
-			}
-		},
 		_indicator: null,
+		__construct: function() {
+			// コントローラ記述を元にバインド
+			this.$find('[data-state]').each(this.ownWithOrg(function(orgThis) {
+				var stateName = $(orgThis).data('state');
+				var controllerName = $(orgThis).data('controller');
+				if (controllerName) {
+					var c = h5.core.controller(orgThis, h5.u.obj.ns(controllerName));
+					this.manageChild(c);
+				}
+			}));
+		},
 		__init: function() {
 			this._indicator = this.indicator({
 				message: 'loading...'
@@ -558,10 +537,8 @@
 			var states = ctx.evArg;
 			var current = states[0];
 			var pre = states[1];
-			var preCtrl = this[pre + 'Controller'];
-			var currentCtrl = this[current + 'Controller'];
-			currentCtrl && currentCtrl.load && currentCtrl.load();
-			preCtrl && preCtrl.unlaod && preCtrl.unlaod();
+			this.$find('[data-state="' + pre + '"]').trigger('unload');
+			this.$find('[data-state="' + current + '"]').trigger('load');
 		}
 	});
 })();
