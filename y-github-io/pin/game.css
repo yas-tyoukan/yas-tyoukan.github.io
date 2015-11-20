@@ -1,12 +1,13 @@
+@charset 'utf-8';
 /************ common ************/
 * {
-	user-select: none; /* CSS3 */
-	-moz-user-select: none; /* Firefox */
-	-webkit-user-select: none; /* SafariÅAChromeÇ»Ç« */
-	-ms-user-select: none; /* IE10Ç©ÇÁÇÁÇµÇ¢ */
+	user-select: none;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
 }
 
-html,body {
+html, body {
 	margin: 0;
 	padding: 0;
 	width: 100%;
@@ -23,7 +24,7 @@ html,body {
 	background-color: #cef;
 }
 
-.scene,.overlay {
+.scene, .overlay {
 	height: 100%;
 	width: 100%;
 	box-sizing: border-box;
@@ -108,12 +109,12 @@ html,body {
 	right: 0;
 }
 
-/************ ê‡ñæ ***********/
+/************ ÔøΩÔøΩÔøΩÔøΩ ***********/
 .explainScene p {
 	font-size: 0.8em;
 }
 
-/************ åãâ  ***********/
+/************ ÔøΩÔøΩÔøΩÔøΩ ***********/
 .result {
 	padding: 3px;
 	background-color: #2a2a2a;
