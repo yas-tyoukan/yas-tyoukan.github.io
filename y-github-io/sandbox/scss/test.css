@@ -1,0 +1,84 @@
+@charset "UTF-8";
+/* ナビゲーションの設定 */
+#navbar {
+	width: 800px;
+}
+
+#navbar li {
+	float: left;
+	box-sizing: border-box;
+	padding: 3px;
+	background-color: #e5a0e9;
+	width: 160px;
+	border-left: 2px solid #f0c9f3;
+}
+
+#navbar li:hover {
+	background-color: #f0c9f3;
+}
+
+ul {
+	list-style: none;
+	padding: 0;
+}
+
+#navbar-0 li {
+	width: 160px;
+}
+
+.button,.button-download {
+	display: inline-block;
+	border: 1px solid gray;
+	background-color: silver;
+}
+
+.button-download {
+	background-color: green;
+	border-radius: 5px;
+}
+
+.button-download .icon {
+	background: url(/img/download.png);
+}
+
+.button-download1 {
+	font-family: Arial;
+	font-size: 20px;
+	font-weight: bold;
+	background-color: green;
+}
+
+.button-submit {
+	font-family: Arial;
+	font-size: 20px;
+	font-weight: bold;
+}
+
+article {
+	padding: 10px;
+	border: 1px dashed gray;
+}
+
+article h1 {
+	padding-left: 5px;
+	padding-bottom: 2px;
+	border-style: solid;
+	border-color: #f88;
+	border-width: 0;
+	border-left-width: 8px;
+	border-bottom-width: 3px;
+}
+
+article .bold {
+	font-weight: bold;
+}
+
+article a {
+	color: aqua;
+}
+
+article a:hover {
+	font-weight: bold;
+}
+
+/*# sourceMappingURL=test.css.map */

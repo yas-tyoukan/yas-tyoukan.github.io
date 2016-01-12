@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="pragma" content="no-cache" />
+<meta http-equiv="cache-control" content="no-cache" />
+<meta name="viewport" content="width=device-width">
+<link rel="stylesheet" href="/hifive/archives/current/h5.css" />
+
+<!-- IE8以下なら1系、それ以外なら2系のjQueryを使用する -->
+<!--[if lt IE 9]>
+<script src="../res/lib/jquery/jquery-1.js"></script>
+<![endif]-->
+<!--[if gte IE 9]><!-->
+<script src="../res/lib/jquery/jquery-2.js"></script>
+<!--<![endif]-->
+
+<script src="/hifive/archives/current/ejs-h5mod.js"></script>
+
+<link type="text/css" href="../res/lib/bootstrap3/css/bootstrap.min.css" rel="stylesheet" />
+<script src="../res/lib/bootstrap3/js/bootstrap.min.js"></script>
+
+<script src="/hifive/archives/current/h5.dev.js"></script>
+
+<!-- ユーザCSS・JS -->
+<link rel="stylesheet" href="css/sample.css" />
+<script src="js/animate.js"></script>
+<script>
+	$(function() {
+		h5.core.controller('body', sample.sampleController);
+	});
+</script>
+
+<title>スクリーン</title>
+</head>
+<body>
+	<div class="wrapper grad">
+		<div class="target">
+			<button class="">ボタン</button>
+		</div>
+	</div>
+	<div class="wrapper grad2">
+		<div class="target">
+			<button class="">ボタン</button>
+			<div class="line">
+				<div class="light"></div>
+			</div>
+		</div>
+	</div>
+	<div class="wrapper size">
+		<button class="target">ボタン</button>
+	</div>
+	<div class="wrapper background">
+		<button class="target">ボタン</button>
+	</div>
+	<div class="wrapper arrow1">
+		<div class="target">
+			<img src="img/gt_y.png"><img src="img/gt_w.png"><img src="img/gt_w.png">
+		</div>
+	</div>
+	<div class="wrapper arrow2">
+		<div class="target">
+			<img src="img/gt_w.png">
+		</div>
+	</div>
+</body>
+</html>

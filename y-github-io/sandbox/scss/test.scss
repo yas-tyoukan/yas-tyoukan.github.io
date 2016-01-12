@@ -1,0 +1,122 @@
+@charset "utf-8";
+
+/* ナビゲーションの設定 */
+#navbar {
+  // ナビゲーションの幅
+  $navbar-width: 800px;
+  // ナビゲーションアイテムの数の幅
+  $items: 5;
+  // ナビゲーションの色
+  $navbar-color: #e5a0e9;
+
+  width: $navbar-width;
+  li {
+    float: left;
+    box-sizing: border-box;
+    padding:3px;
+    // 背景色をナビゲーションの色に設定
+    background-color: $navbar-color;
+    // ナビゲーションの幅をアイテムの数で分割した幅
+    width: $navbar-width / $items;
+    // ボーダーの色はナビゲーションの色を明るくした色
+    border-left: 2px solid lighten($navbar-color, 10%);
+
+    &:hover {
+      // hoverした時に明るい色にする
+      background-color: lighten($navbar-color, 10%);
+    }
+  }
+}
+
+
+ul{
+list-style:none;
+padding: 0;
+}
+
+
+@function calc-column-width($width, $num) {
+  @return round($width / $num);
+}
+#navbar-0 {
+  // ナビゲーションの幅
+  $navbar-width: 800px;
+  // ナビゲーションアイテムの数の幅
+  $items: 5;
+  //～(中略)～
+  li {
+    //～(中略)～
+    // カラム幅を取得
+    width: calc-column-width($navbar-width, $items);
+    //～(中略)～
+  }
+}
+
+
+.button {
+  display: inline-block;
+  border: 1px solid gray;
+  background-color: silver;
+}
+
+.button-download {
+  @extend .button;          // .buttonを継承
+  background-color: green;  // プロパティを上書き
+  border-radius: 5px;       // 新たなプロパティを追加
+  .icon {                   // ネストしたセレクタの追加
+    background: url(/img/download.png);
+  }
+}
+
+
+
+// large-textと言う名前のミックスインを作成
+@mixin large-text {
+  font: {
+    family: Arial;
+    size: 20px;
+    weight: bold;
+  }
+}
+
+.button-download1 {
+  @include large-text;
+  background-color: green;
+}
+
+.button-submit {
+  @include large-text;
+}
+
+
+
+article{
+  padding: 10px;
+  border: 1px dashed gray;
+  h1 {
+    padding:{
+      left: 5px;
+      bottom: 2px;
+    }
+    border: {
+      style: solid;
+      color: #f88;
+      width: 0;
+      left: {
+        width: 8px;
+      }
+      bottom: {
+        width: 3px;
+      }
+    }
+  }
+  .bold {
+    font-weight: bold;
+  }
+  a {
+    color: aqua;
+    &:hover {
+      font-weight: bold;
+    }
+  }
+}
