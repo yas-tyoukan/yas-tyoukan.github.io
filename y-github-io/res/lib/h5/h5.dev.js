@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 NS Solutions Corporation
+ * Copyright (C) 2012-2016 NS Solutions Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,10 @@
  * limitations under the License.
  *
  * hifive
- *   version Nightly_2015-04-24_11-03-03-383
- *   gitCommitId : 8192e0464c707235e39068c51ce280bfb2a6b634
- *   build at 2015/04/24 11:03:04.865 (+0900)
- *   (util,async,resource,controller,dataModel,modelWithBinding,view,ui,api.geo,api.sqldb,api.storage,scene)
+ *   version Nightly_2016-01-14_14-24-12-876
+ *   gitCommitId : 85d0fcbe3e08b45c23407552a16110ed1650c75a
+ *   build at 2016/01/14 14:24:15.731 (+0900)
+ *   (scopedglobals,util,async,resource,controller,dataModel,view,modelWithBinding,validation,ui,api.geo,api.sqldb,api.storage,scene)
  */
 (function($){
 
@@ -31,7 +31,7 @@
 
 	//h5存在チェック
 	if (window.h5) {
-		if (window.h5.env && (window.h5.env.version === 'Nightly_2015-04-24_11-03-03-383')) {
+		if (window.h5.env && (window.h5.env.version === 'Nightly_2016-01-14_14-24-12-876')) {
 			// 既にロード済みのhifiveと同じバージョンをロードしようとした場合は何もしない
 			return;
 		}
@@ -55,7 +55,7 @@
 	};
 
 	h5.env = {
-		version: 'Nightly_2015-04-24_11-03-03-383'
+		version: 'Nightly_2016-01-14_14-24-12-876'
 	};
 
 	// =========================================================================
@@ -535,7 +535,7 @@ var isArray = Array.isArray || (function() {
 })();
 
 /**
- * 引数が配列かどうか判定
+ * 引数が関数かどうか判定
  *
  * @private
  * @param {Any} obj
@@ -557,7 +557,14 @@ var isFunction = (function() {
 })();
 
 /**
+ * 複数のプロミスを待機する機能と、待機中のプロミスを外す機能を提供するクラス
  *
+ * @private
+ * @class
+ * @param promises
+ * @param doneCallback
+ * @param failCallback
+ * @param cfhIfFail
  */
 function WaitingPromiseManager(promises, doneCallback, failCallback, cfhIfFail) {
 	// 高速化のため、長さ1または0の場合はforを使わずにチェックする
@@ -981,6 +988,22 @@ var h5internal = {
 		return str;
 	}
 
+	/**
+	 * 文字列中のダブルコーテーションをエスケープする
+	 *
+	 * @private
+	 * @param {String} str
+	 * @returns {String} エスケープ後の文字列
+	 */
+	function escapeDoubleQuotation(str) {
+		// オブジェクトまたは配列の場合、シリアライズした結果に対して、ダブルコーテーションもエスケープする。#459
+		// ダブルコーテーションを\"でエスケープし、エスケープで使用する\は\\にエスケープする。
+		// これはオブジェクトまたは配列のデシリアライズ時に$.parseJSONを使用していて、その際にダブルコーテーション及びバックスラッシュがアンエスケープされるためである。
+		// 例えば {'"':'"'} のようなキー名または値にダブルコーテーションを含むようなオブジェクトの場合、
+		// parseJSONはダブルコーテーションをエスケープするため、'{"\\"":"\\""}' のような文字列にしないとparseJSONで復元できない。
+		// '{"\"":"\""}' をparseJSONするとエラーになってしまう。
+		return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+	}
 
 	/**
 	 * 指定されたスクリプトファイルをロードして、スクリプト文字列を取得します。(loadScriptメソッド用)
@@ -1406,17 +1429,74 @@ var h5internal = {
 
 	/**
 	 * 第一引数の文字列に含まれる{0}、{1}、{2}...{n} (nは数字)を、第2引数以降に指定されたパラメータに置換します。
+	 * <p>
+	 * また、{0.name}のように記述すると第2引数のnameプロパティの値で置換を行います。"0."は引数の何番目かを指し、第2引数を0としてそれ以降の引数のプロパティの値を採ることもできます。
+	 * </p>
+	 * <p>
+	 * "0."は省略して単に{name}のように記述することもできます。また、{0.birthday.year}のように入れ子になっているプロパティを辿ることもできます。
+	 * </p>
+	 * <p>
+	 * "."の代わりに"[]"を使ってプロパティにアクセスすることもできます。以下、使用例です。
+	 * </p>
+	 * <p>
 	 *
-	 * <pre>
-	 * 例：
-	 * 		var myValue = 10;
-	 * 		h5.u.str.format('{0} is {1}', 'myValue', myValue);
-	 * </pre>
+	 * <pre class="sh_javascript"><code>
+	 * var myValue = 10;
+	 * h5.u.str.format('{0} is {1}', 'myValue', myValue);
+	 * </code></pre>
 	 *
 	 * 実行結果: myValue is 10
+	 * </p>
+	 * <p>
+	 *
+	 * <pre class="sh_javascript"><code>
+	 * h5.u.str.format('{name} is at {address}', {
+	 * 	name: 'Taro',
+	 * 	address: 'Yokohama'
+	 * });
+	 * </code></pre>
+	 *
+	 * 実行結果: Taro is at Yokohama
+	 * </p>
+	 * <p>
+	 *
+	 * <pre class="sh_javascript"><code>
+	 * h5.u.str.format('{0} is born on {1.birthday.year}.', 'Taro', {
+	 * 	birthday: {
+	 * 		year: 1990
+	 * 	}
+	 * });
+	 * </code></pre>
+	 *
+	 * 実行結果: Taro is born on 1990.
+	 * </p>
+	 * <p>
+	 *
+	 * <pre class="sh_javascript"><code>
+	 * h5.u.str.format('{0.name} likes {0.hobby[0]}. {1.name} likes {1.hobby[0]}.', {
+	 * 	name: 'Taro',
+	 * 	hobby: ['Traveling', 'Shopping']
+	 * }, {
+	 * 	name: 'Hanako',
+	 * 	hobby: ['Chess']
+	 * });
+	 * </code></pre>
+	 *
+	 * 実行結果: Taro likes Traveling. Hanako likes Chess.
+	 * </p>
+	 * <p>
+	 *
+	 * <pre class="sh_javascript"><code>
+	 * h5.u.str.format('{0.0},{0.1},{0.2},…(長さ{length})', [2, 3, 5, 7]);
+	 * // 以下と同じ
+	 * h5.u.str.format('{0[0]},{0[1]},{0[2]},…(長さ{0.length})', [2, 3, 5, 7]);
+	 * </code></pre>
+	 *
+	 * 実行結果: 2,3,5,…(長さ4)
+	 * </p>
 	 *
 	 * @param {String} str 文字列
-	 * @param {Any} var_args 可変長引数
+	 * @param {Any} var_args 可変長引数。ただし1つ目にオブジェクトまたは配列を指定した場合はその中身で置換
 	 * @returns {String} フォーマット済み文字列
 	 * @name format
 	 * @function
@@ -1426,9 +1506,21 @@ var h5internal = {
 		if (str == null) {
 			return '';
 		}
-		var args = arguments;
-		return str.replace(/\{(\d+)\}/g, function(m, c) {
-			var rep = args[parseInt(c, 10) + 1];
+		var args = argsToArray(arguments).slice(1);
+		return str.replace(/\{(.+?)\}/g, function(m, c) {
+			if (/^\d+$/.test(c)) {
+				// {0}のような数値のみの指定の場合は引数の値をそのまま返す
+				var rep = args[parseInt(c, 10)];
+				if (typeof rep === TYPE_OF_UNDEFINED) {
+					// undefinedなら"undefined"を返す
+					return TYPE_OF_UNDEFINED;
+				}
+				return rep;
+			}
+			// 数値じゃない場合はオブジェクトプロパティ指定扱い
+			// 数値.で始まっていなければ"0."が省略されていると見做す
+			var path = /^\d+[\.|\[]/.test(c) ? c : '0.' + c;
+			var rep = getByPath(path, args);
 			if (typeof rep === TYPE_OF_UNDEFINED) {
 				return TYPE_OF_UNDEFINED;
 			}
@@ -1610,7 +1702,7 @@ var h5internal = {
 					} else if ($.type(val[i]) === 'function') {
 						elm = typeToCode(TYPE_OF_UNDEFINED);
 					} else {
-						elm = (func(val[i])).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+						elm = escapeDoubleQuotation(func(val[i]));
 					}
 					ret += '"' + elm + '"';
 					if (i !== val.length - 1) {
@@ -1623,14 +1715,13 @@ var h5internal = {
 						continue;
 					}
 					if ($.type(val[key]) !== 'function') {
-						hash += '"' + escape(key) + '":"'
-								+ (func(val[key])).replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-								+ '",';
+						hash += '"' + escapeDoubleQuotation(escape(key)) + '":"'
+								+ escapeDoubleQuotation(func(val[key])) + '",';
 					}
 				}
 				if (hash) {
 					ret += ((val.length) ? ',' : '') + '"' + typeToCode('objElem') + '{'
-							+ hash.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+							+ escapeDoubleQuotation(hash);
 					ret = ret.replace(/,$/, '');
 					ret += '}"';
 				}
@@ -1648,9 +1739,8 @@ var h5internal = {
 						if ($.type(val[key]) === 'function') {
 							continue;
 						}
-						ret += '"' + key + '":"'
-								+ (func(val[key])).replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-								+ '",';
+						ret += '"' + escapeDoubleQuotation(escape(key)) + '":"'
+								+ escapeDoubleQuotation(func(val[key])) + '",';
 					}
 				}
 				ret = ret.replace(/,$/, '');
@@ -1808,27 +1898,27 @@ var h5internal = {
 					if (!isArray(obj)) {
 						throwFwError(ERR_CODE_DESERIALIZE_VALUE);
 					}
-					for (var i = 0; i < obj.length; i++) {
+					var ret = [];
+					for (var i = 0, l = obj.length; i < l; i++) {
 						switch (codeToType(obj[i].substring(0, 1))) {
 						case 'undefElem':
-							delete obj[i];
+							// i番目に値を何も入れない場合と、
+							// i番目に値を入れてからdeleteする場合とで
+							// lengthが異なる場合がある。
+							// 最後の要素にundefが明示的に入れられている場合は後者のやりかたでデシリアライズする必要がある
+							ret[i] = undefined;
+							delete ret[i];
 							break;
 						case 'objElem':
 							var extendObj = func(typeToCode('object') + obj[i].substring(1));
-							var tempObj = [];
-							for (var i = 0, l = obj.length - 1; i < l; i++) {
-								tempObj[i] = obj[i];
-							}
-							obj = tempObj;
 							for ( var key in extendObj) {
-								obj[key] = extendObj[key];
+								ret[unescape(key)] = extendObj[key];
 							}
 							break;
 						default:
-							obj[i] = func(obj[i]);
+							ret[i] = func(obj[i]);
 						}
 					}
-					ret = obj;
 					break;
 				case 'object':
 					var obj;
@@ -1840,10 +1930,13 @@ var h5internal = {
 					if (!$.isPlainObject(obj)) {
 						throwFwError(ERR_CODE_DESERIALIZE_VALUE);
 					}
+					var ret = {};
 					for ( var key in obj) {
-						obj[key] = func(obj[key]);
+						// プロパティキーはエスケープしたものになっている
+						// 元のプロパティキー(エスケープ前)のものに変更して値を持たせる
+						var val = func(obj[key]);
+						ret[unescape(key)] = val;
 					}
-					ret = obj;
 					break;
 				case 'date':
 					ret = new Date(parseInt(ret, 10));
@@ -1911,6 +2004,32 @@ var h5internal = {
 
 	/**
 	 * 指定された名前空間に存在するオブジェクトを取得します。
+	 * <p>
+	 * 第1引数に名前空間文字列、第2引数にルートオブジェクトを指定します。第2引数を省略した場合はwindowオブジェクトをルートオブジェクトとして扱います。
+	 * </p>
+	 * <p>
+	 * 名前空間文字列はプロパティ名を"."区切りで記述子、ルートオブジェクトからのパスを記述します。また"."区切りの代わりに"[]"を使ってプロパティアクセスを表すことも可能です。
+	 * </p>
+	 *
+	 * <pre class="sh_javascript"><code>
+	 * var rootObj = {
+	 * 	a: {
+	 * 		b: {
+	 * 			c: [{
+	 * 				d: 'hoge'
+	 * 			}]
+	 * 		}
+	 * 	}
+	 * };
+	 * h5.u.obj.getByPath('a.b.c[0].d', rootObj);
+	 * // → hoge
+	 *
+	 * window.hoge = {
+	 * 	obj: rootObj
+	 * };
+	 * h5.u.obj.getByPath('hoge.obj.a.b.c[0].d');
+	 * // → hoge
+	 * </code></pre>
 	 *
 	 * @param {String} namespace 名前空間
 	 * @param {Object} [rootObj=window] 名前空間のルートとなるオブジェクト。デフォルトはwindowオブジェクト。
@@ -1923,6 +2042,15 @@ var h5internal = {
 		if (!isString(namespace)) {
 			throwFwError(ERR_CODE_NAMESPACE_INVALID, 'h5.u.obj.getByPath()');
 		}
+		// 'ary[0]'のような配列のindex参照の記法に対応するため、'.'記法に変換する
+		namespace = namespace.replace(/\[(\d+)\]/g, function(m, c, index) {
+			if (index) {
+				// 先頭以外の場合は'[]'を外して'.'を付けて返す
+				return '.' + c;
+			}
+			// 先頭の場合は'[]'を外すだけ
+			return c;
+		});
 
 		var names = namespace.split('.');
 		var idx = 0;
@@ -3404,6 +3532,28 @@ var h5internal = {
 	// =============================
 	// Production
 	// =============================
+	/**
+	 * シーン間パラメーター用デフォルトプレフィクス
+	 */
+	var DEFAULT_CLIENT_QUERY_STRING_PREFIX = '';
+
+	/**
+	 * シーン間パラメーター用デフォルトプレフィクス(FW用)
+	 */
+	var DEFAULT_CLIENT_FW_QUERY_STRING_PREFIX = '_h5_';
+
+	/**
+	 * Router 遷移先URL最大長
+	 * <p>
+	 * URL全体がこの値を超えた場合、開発字はエラー、運用時は警告ログを出力。 IEで2084の場合があり、これ以下で、ある程度のバッファを取った。
+	 * </p>
+	 */
+	var URL_MAX_LENGTH = 1800;
+
+	/**
+	 * シーンのデフォルトのヒストリーモード
+	 */
+	var DEFAULT_HISTORY_MODE = 'history';
 
 	// =============================
 	// Development Only
@@ -3689,26 +3839,72 @@ var h5internal = {
 		 */
 		trackstartTouchAction: 'none',
 
+		/**
+		 * h5.resモジュールの設定
+		 * <p>
+		 * 以下のプロパティの設定を行ってください
+		 * </p>
+		 * <dl>
+		 * <dt>baseUrl</dt>
+		 * <dd>type:string|null</dd>
+		 * <dd>ベースURL。デフォルトはnullで、リソースパス解決時のブラウザのアドレスバーの（ファイル名部分を除いた）パスがカレントパスになります(空文字を指定した場合もnullと同じです)</dd>
+		 * <dt>resolveTimeout</dt>
+		 * <dd>type:integer</dd>
+		 * <dd>タイムアウト時間設定(ms)を設定。タイムアウトに設定された時間待機して、依存解決ができない場合、resolve()は失敗します。デフォルトは10000(10秒)です。</dd>
+		 * </dl>
+		 *
+		 * @memberOf h5.settings
+		 * @type Object
+		 */
 		res: {
-			/**
-			 * リソースを取得時のカレントパス
-			 * <p>
-			 * デフォルトはnullで、hifiveを読み込んだページがカレントパスになります(空文字を指定した場合もnullと同じです)
-			 * </p>
-			 *
-			 * @memberOf h5.settings.res
-			 */
 			baseUrl: null,
+			resolveTimeout: 10000
+		},
 
-			/**
-			 * タイムアウト時間設定(ms)
-			 * <p>
-			 * タイムアウトに設定された時間待機して、依存解決ができない場合、resolve()は失敗します。デフォルトは10000(10秒)です。
-			 * </p>
-			 *
-			 * @memberOf h5.settings.res
-			 */
-			timeoutTime: 10000
+		// TODO autoInitがtrueの場合のみinit
+		// TODO(鈴木) 暫定。とりあえず設定を有効化しました
+		/**
+		 * シーン機能の設定
+		 * <p>
+		 * 以下のプロパティの設定を行ってください。
+		 * </p>
+		 * <dl>
+		 * <dt>followTitle</dt>
+		 * <dd>type:boolean</dd>
+		 * <dd>メインシーンコンテナでブラウザタイトルの追従を行うか(デフォルトtrue)</dd>
+		 * <dt>clientQueryStringPrefix</dt>
+		 * <dd>type:string</dd>
+		 * <dd>シーン遷移パラメーター識別用プレフィクス。デフォルト空文字</dd>
+		 * <dt>clientFWQueryStringPrefix</dt>
+		 * <dd>type:string</dd>
+		 * <dd>シーン遷移パラメーター識別用プレフィクス(FW用)。デフォルト"_h5_"</dd>
+		 * <dt>urlHistoryMode</dt>
+		 * <dd>type:string</dd>
+		 * <dd>メインシーンコンテナURL履歴保持方法({@link h5.scene.urlHistoryMode}参照)。デフォルトは"'history"</dd>
+		 * <dt>urlMaxLength</dt>
+		 * <dd>type:integer</dd>
+		 * <dd>シーン遷移先URL最大長。デフォルト1800</dd>
+		 * <dt>baseUrl</dt>
+		 * <dd>type:string|null</dd>
+		 * <dd>ベースURL。デフォルトはnullで、hifiveを読み込んだページがカレントパスになります(空文字を指定した場合もnullと同じです)</dd>
+		 * <dt>autoInit</dt>
+		 * <dd>type:boolean</dd>
+		 * <dd>ページロード時にドキュメント全体を探索して、DATA属性によるコントローラーバインドとシーンコンテナ生成を行うかどうか。デフォルトfalse</dd>
+		 * </dl>
+		 *
+		 * @memberOf h5.settings
+		 * @name scene
+		 * @type {Object}
+		 */
+		scene: {
+			// デフォルト設定を記述
+			followTitle: true,
+			clientQueryStringPrefix: DEFAULT_CLIENT_QUERY_STRING_PREFIX,
+			clientFWQueryStringPrefix: DEFAULT_CLIENT_FW_QUERY_STRING_PREFIX,
+			urlHistoryMode: DEFAULT_HISTORY_MODE,
+			urlMaxLength: URL_MAX_LENGTH,
+			baseUrl: null,
+			autoInit: false
 		}
 	};
 
@@ -3889,6 +4085,15 @@ var h5internal = {
 		var isWindowsPhone = !!ua.match(/Windows Phone/i);
 
 		/**
+		 * ブラウザがMicrosoft Edgeであるかどうかを表します。
+		 *
+		 * @name isEdge
+		 * @type Boolean
+		 * @memberOf h5.env.ua
+		 */
+		var isEdge = !!ua.match(/Edge/);
+
+		/**
 		 * ブラウザがInternet Explorerであるかどうかを表します。
 		 *
 		 * @name isIE
@@ -3919,7 +4124,8 @@ var h5internal = {
 		 * @type Boolean
 		 * @memberOf h5.env.ua
 		 */
-		var isChrome = !!ua.match(/Chrome/i) || !!ua.match(/CrMo/) || !!ua.match(/CriOS/);
+		var isChrome = (!isEdge && !!ua.match(/Chrome/i)) || !!ua.match(/CrMo/)
+				|| !!ua.match(/CriOS/);
 
 		/**
 		 * ブラウザがSafariであるかどうかを表します。 iOSのSafariの場合もtrueです。
@@ -3928,7 +4134,7 @@ var h5internal = {
 		 * @type Boolean
 		 * @memberOf h5.env.ua
 		 */
-		var isSafari = !isAndroid && !!ua.match(/Safari/i) && !isChrome;
+		var isSafari = !isEdge && !isAndroid && !isChrome && !!ua.match(/Safari/i);
 
 		/**
 		 * レンダリングエンジンがWebkitであるかどうかを表します。
@@ -3937,7 +4143,7 @@ var h5internal = {
 		 * @type Boolean
 		 * @memberOf h5.env.ua
 		 */
-		var isWebkit = !!ua.match(/Webkit/i);
+		var isWebkit = !isEdge && !!ua.match(/Webkit/i);
 
 		/**
 		 * ブラウザがOperaであるかどうかを表します。 モバイル、iOSのOperaの場合もtrueです。
@@ -4127,6 +4333,8 @@ var h5internal = {
 				if (!version) {
 					version = spaceSplit('Opera');
 				}
+			} else if (isEdge) {
+				version = slashSplit('Edge');
 			}
 			if (version) {
 				browserVersion = getMainVersion(version);
@@ -4149,6 +4357,7 @@ var h5internal = {
 			isChrome: isChrome,
 			isSafari: isSafari,
 			isOpera: isOpera,
+			isEdge: isEdge,
 			isAndroidDefaultBrowser: isAndroidDefaultBrowser,
 			isSmartPhone: isSmartPhone,
 			isTablet: isTablet,
@@ -5008,6 +5217,8 @@ var h5internal = {
 	 * このクラスは自分でnewすることはありません。 h5.ajax()の戻り値がこのクラスです。
 	 * jqXHRをラップしているクラスで、jqXHRのメソッド、プロパティを使用することができます。
 	 * </p>
+	 * <p>jqXHRについての詳細は{@link http://api.jquery.com/jQuery.ajax/|jQuery.ajax() | jQuery API Documentation}をご覧ください。
+	 * </p>
 	 * <p>
 	 * <strong>注意：</strong>jqXHRオブジェクトと違い、success, error, complete メソッドはありません(非推奨であるため)。 それぞれ、done,
 	 * fail, always を使用して下さい。
@@ -5015,6 +5226,11 @@ var h5internal = {
 	 *
 	 * @class
 	 * @name JqXHRWrapper
+	 */
+	/**
+	 * @private
+	 * @param jqXHR
+	 * @param dfd
 	 */
 	function JqXHRWrapper(jqXHR, dfd) {
 		// オリジナルのjqXHRから値をコピー
@@ -5391,6 +5607,49 @@ var h5internal = {
 		}
 	};
 
+	/**
+	 * キャッシュ機構を使用してURLへアクセスします
+	 *
+	 * @private
+	 */
+	var urlLoader = {
+		/**
+		 * 指定されたテンプレートパスからテンプレートを非同期で読み込みます。 テンプレートパスがキャッシュに存在する場合はキャッシュから読み込みます。
+		 *
+		 * @private
+		 * @param {String} resourcePath リソースパス
+		 * @returns {Object} Promiseオブジェクト
+		 */
+		load: function(resourcePath) {
+			var absolutePath = toAbsoluteUrl(resourcePath);
+			// キャッシュにある場合
+			if (cacheManager.cache[absolutePath]) {
+				// キャッシュから取得したリソースを返す
+				// 新しくDeferredを作ってプロミスを返す
+				return getDeferred().resolve(cacheManager.getResourceFromCache(absolutePath))
+						.promise();
+			}
+			// キャッシュにない場合
+			// urlからロードして、そのプロミスを返す
+			return cacheManager.loadResourceFromPath(resourcePath);
+		},
+
+		/**
+		 * URL(path)を指定してキャッシュをクリアする
+		 *
+		 * @param {String} path
+		 */
+		clearCache: function(path) {
+			cacheManager.clearCache(path);
+		},
+		/**
+		 * URLキャッシュをすべてクリアする
+		 */
+		clearAllCache: function() {
+			cacheManager.clearAllCache();
+		}
+	};
+
 	// =============================
 	// Functions
 	// =============================
@@ -5400,6 +5659,8 @@ var h5internal = {
 	 * <a href="h5.res.html#reequire">h5.res.dependsOn()</a>がこのクラスのインスタンスを返します。
 	 * </p>
 	 *
+	 * @class
+	 * @name Dependency
 	 * @param {String} resourceKey
 	 */
 	function Dependency(resourceKey) {
@@ -5414,8 +5675,16 @@ var h5internal = {
 		 * <p>
 		 * 登録されているリゾルバでresolveできないリソースキーの場合はfalseを返します
 		 * </p>
+		 * <p>
+		 * 第1引数にリゾルバのタイプを指定した場合、登録されているリゾルバから同一タイプのものを探して、そのリゾルバを使って解決します。
+		 * </p>
+		 * <p>
+		 * 第1引数を省略した場合は、リソースキーから使用するリゾルバを決定します。
+		 * </p>
 		 *
-		 * @param {String} type
+		 * @memberOf Dependency
+		 * @param {String} [type] リゾルバタイプ
+		 * @returns {Promise} 依存関係の解決を待機するプロミスオブジェクト
 		 */
 		resolve: function(type) {
 			// リゾルバを特定する
@@ -5477,6 +5746,7 @@ var h5internal = {
 		/**
 		 * 指定されたリソースキーを返します
 		 *
+		 * @memberOf Dependency
 		 * @returns {String} リソースキー
 		 */
 		getKey: function() {
@@ -5487,68 +5757,44 @@ var h5internal = {
 	/**
 	 * カレントを考慮したファイルパスの取得
 	 *
+	 * @private
 	 * @param {String} filePath
 	 * @returns {String}
 	 */
 	function getFilePath(filePath) {
-		// './'で始まるパスが指定されていたら'./'を取り除いてbaseUrlを先頭に追加する
-		filePath = filePath.indexOf('./') === 0 ? filePath.slice(2) : filePath;
-		return (h5.settings.res.baseUrl || './') + filePath;
-	}
-
-	/**
-	 * リソースの登録
-	 *
-	 * @param {String} key
-	 * @param {Any} value
-	 * @param {Boolean} [exposeToGlobal=false] グローバルに公開するか
-	 * @param {String} [exposureName=null] グローバル公開名
-	 */
-	function register(key, value, exposeToGlobal, exposureName) {
-		if (exposeToGlobal) {
-			if (exposureName) {
-				h5.u.obj.expose(exposureName, value);
-			} else {
-				h5.u.obj.expose(key, value);
+		var baseUrl = h5.settings.res.baseUrl;
+		if (filePath === toAbsoluteUrl(filePath) || filePath.indexOf('/') === 0) {
+			// filePathが絶対パスの場合、または、'/'始まりの場合は、filePathをそのまま返す
+			return filePath;
+		}
+		if (!baseUrl) {
+			// baseUrlが指定されていないなら'./'を付けて返す
+			if (filePath.indexOf('./') === 0) {
+				return filePath;
 			}
-		}
-		// コンポーネントマップに登録
-		componentMap[key] = value;
-		// このリソースキーに紐づくdeferredが既に解決済み(waitingInfoから削除済み)なら何もしない
-		var waitingInfo = waitingInfoMap[key];
-		if (!waitingInfo) {
-			return;
-		}
-		delete waitingInfoMap[key];
-		var dfd = waitingInfo.deferred;
-		var timer = waitingInfo.timer;
-		if (timer) {
-			// タイムアウト待ちタイマーをクリア
-			clearTimeout(timer);
+			return './' + filePath;
 		}
 
-		// 読込後の処理(register()呼び出し後)等が実行された後に、
-		// ユーザコードのdoneハンドラが動作するようにするためsetTimeout使用
-		// 既に動作しているタイマーがあれば新たにタイマーは作らない
-		waitingForImmediateDeferred.push({
-			dfd: dfd,
-			value: value
-		});
-		if (!waitingImmediateTimer) {
-			waitingImmediateTimer = setTimeout(function() {
-				waitingImmediateTimer = null;
-				var dfds = waitingForImmediateDeferred
-						.splice(0, waitingForImmediateDeferred.length);
-				for (var i = 0, l = dfds.length; i < l; i++) {
-					dfds[i].dfd.resolve(dfds[i].value);
-				}
-			}, 0);
+		// 上位パス指定('../')を取り除いて、baseUrlの上位をたどる
+		function removeAbovePath(base, path) {
+			if (path.indexOf('../') !== 0) {
+				return base + path;
+			}
+			path = path.slice(3);
+			base = base.replace(/[^\/]+?\/$/, '');
+			return removeAbovePath(base, path);
 		}
+		// baseUrlを'/'終わりにして、上位パス指定の計算
+		if (!h5.u.str.endsWith(baseUrl, '/')) {
+			baseUrl += '/';
+		}
+		return removeAbovePath(baseUrl, filePath);
 	}
 
 	/**
 	 * 名前空間からjsファイルをロードするリゾルバ
 	 *
+	 * @private
 	 * @param {String} resourceKey
 	 * @returns {Promise} 解決した名前空間オブジェクトをresolveで渡します
 	 */
@@ -5567,15 +5813,15 @@ var h5internal = {
 
 		var dfd = getDeferred();
 		// タイムアウト設定
-		var timeoutTime = h5.settings.res.timeoutTime;
+		var resolveTimeout = h5.settings.res.resolveTimeout;
 		var timer = null;
-		if (timeoutTime > 0) {
+		if (resolveTimeout > 0) {
 			timer = setTimeout(function() {
 				if (waitingInfoMap[resourceKey]) {
 					delete waitingInfoMap[resourceKey];
 					dfd.reject(createRejectReason(ERR_CODE_RESOLVE_TIMEOUT, [resourceKey]));
 				}
-			}, timeoutTime);
+			}, resolveTimeout);
 		}
 		// registerされるのを待つ
 		waitingInfoMap[resourceKey] = {
@@ -5605,6 +5851,7 @@ var h5internal = {
 	/**
 	 * ejsファイルリゾルバ
 	 *
+	 * @private
 	 * @param {String} resourceKey
 	 * @returns {Promise} 以下のようなオブジェクトをresolveで返します
 	 *
@@ -5621,7 +5868,7 @@ var h5internal = {
 		urlLoader.load(getFilePath(resourceKey)).done(function(resource) {
 			// コンテンツからscript要素を取得
 			var $elements = $(resource.content).filter(function() {
-				// IE8以下で、要素内にSCRIPTタグが含まれていると、jQueryが</SCRIPT>をunknownElementとして扱ってしまう。
+				// IE8以下で、要素内にSCRIPTタグが含まれていると、jQueryが&lt;/SCRIPT&gt;をunknownElementとして扱ってしまう。
 				// nodeTypeを見てコメントノードも除去して、tagNameが'/SCRIPT'のものも除去する。
 				return this.nodeType === 1 && this.tagName.indexOf('/') !== 0;
 			});
@@ -5680,22 +5927,23 @@ var h5internal = {
 	/**
 	 * jsファイルのデフォルトのリゾルバを作成する
 	 *
+	 * @private
 	 * @param {String} resourceKey
-	 * @param {String} type
 	 * @returns {Function} Viewリゾルバ
 	 */
-	function resolveJs(resourceKey, type) {
+	function resolveJs(resourceKey) {
 		// loadScriptでロードする
 		return h5.u.loadScript(getFilePath(resourceKey));
 	}
 	/**
 	 * cssファイルのデフォルトのリゾルバを作成する
 	 *
+	 * @private
 	 * @param {String} resoruceKey
 	 * @param {String} type
 	 * @returns {Function} Viewリゾルバ
 	 */
-	function resolveCss(resourceKey, type) {
+	function resolveCss(resourceKey) {
 		var head = document.getElementsByTagName('head')[0];
 
 		var cssNode = document.createElement('link');
@@ -5709,78 +5957,11 @@ var h5internal = {
 		return getDeferred().resolve(cssNode).promise();
 	}
 
-	/**
-	 * 引数がDependencyクラスかどうか判定
-	 *
-	 * @param {Any} obj
-	 * @returns {Boolean} Dependencyクラスかどうか
-	 */
-	function isDependency(obj) {
-		return obj instanceof Dependency;
-	}
-	// =========================================================================
-	//
-	// Body
-	//
-	// =========================================================================
-
-	/**
-	 * キャッシュ機構を使用してURLへアクセスします
-	 *
-	 * @memberOf h5.res
-	 * @name urlLoader
-	 */
-	var urlLoader = {
-		/**
-		 * 指定されたテンプレートパスからテンプレートを非同期で読み込みます。 テンプレートパスがキャッシュに存在する場合はキャッシュから読み込みます。
-		 *
-		 * @param {String} resourcePath リソースパス
-		 * @returns {Object} Promiseオブジェクト
-		 */
-		load: function(resourcePath) {
-			var absolutePath = toAbsoluteUrl(resourcePath);
-			// キャッシュにある場合
-			if (cacheManager.cache[absolutePath]) {
-				// キャッシュから取得したリソースを返す
-				// 新しくDeferredを作ってプロミスを返す
-				return getDeferred().resolve(cacheManager.getResourceFromCache(absolutePath))
-						.promise();
-			}
-			// キャッシュにない場合
-			// urlからロードして、そのプロミスを返す
-			return cacheManager.loadResourceFromPath(resourcePath);
-		},
-
-		/**
-		 * URL(path)を指定してキャッシュをクリアする
-		 *
-		 * @param {String} path
-		 */
-		clearCache: function(path) {
-			cacheManager.clearCache(path);
-		},
-		/**
-		 * URLキャッシュをすべてクリアする
-		 */
-		clearAllCache: function() {
-			cacheManager.clearAllCache();
-		}
-	};
-
-	/**
-	 * リソースキーから、Dependencyオブジェクトを返します
-	 *
-	 * @memberOf h5.res
-	 * @param {String} resourceKey
-	 * @returns {Dependency}
-	 */
-	function dependsOn(resourceKey) {
-		return new Dependency(resourceKey);
-	}
 
 	/**
 	 * リゾルバを追加します
 	 *
+	 * @private
 	 * @param {String} type リゾルバのタイプ。リゾルバをタイプと紐づける。nullを指定した場合はtypeに紐づかないリゾルバを登録します。
 	 * @param {RegExp|Function} test リソースキーがこのリゾルバにマッチするかどうかの正規表現、または関数
 	 * @param {Function} resolver リゾルバ
@@ -5800,6 +5981,33 @@ var h5internal = {
 		});
 	}
 
+	// =========================================================================
+	//
+	// Body
+	//
+	// =========================================================================
+	/**
+	 * 引数がDependencyクラスかどうか判定
+	 *
+	 * @memberOf h5.res
+	 * @param {Any} obj
+	 * @returns {Boolean} Dependencyクラスかどうか
+	 */
+	function isDependency(obj) {
+		return obj instanceof Dependency;
+	}
+
+	/**
+	 * リソースキーから、Dependencyオブジェクトを返します
+	 *
+	 * @memberOf h5.res
+	 * @param {String} resourceKey
+	 * @returns {Dependency}
+	 */
+	function dependsOn(resourceKey) {
+		return new Dependency(resourceKey);
+	}
+
 	/**
 	 * 指定されたリソースキーの解決を行います
 	 *
@@ -5809,6 +6017,57 @@ var h5internal = {
 	 */
 	function get(resourceKey) {
 		return h5.res.dependsOn(resourceKey).resolve();
+	}
+
+	/**
+	 * リソースの登録
+	 *
+	 * @memberOf h5.res
+	 * @param {String} key
+	 * @param {Any} value
+	 * @param {Boolean} [exposeToGlobal=false] グローバルに公開するか
+	 * @param {String} [exposureName=null] グローバル公開名
+	 */
+	function register(key, value, exposeToGlobal, exposureName) {
+		if (exposeToGlobal) {
+			if (exposureName) {
+				h5.u.obj.expose(exposureName, value);
+			} else {
+				h5.u.obj.expose(key, value);
+			}
+		}
+		// コンポーネントマップに登録
+		componentMap[key] = value;
+		// このリソースキーに紐づくdeferredが既に解決済み(waitingInfoから削除済み)なら何もしない
+		var waitingInfo = waitingInfoMap[key];
+		if (!waitingInfo) {
+			return;
+		}
+		delete waitingInfoMap[key];
+		var dfd = waitingInfo.deferred;
+		var timer = waitingInfo.timer;
+		if (timer) {
+			// タイムアウト待ちタイマーをクリア
+			clearTimeout(timer);
+		}
+
+		// 読込後の処理(register()呼び出し後)等が実行された後に、
+		// ユーザコードのdoneハンドラが動作するようにするためsetTimeout使用
+		// 既に動作しているタイマーがあれば新たにタイマーは作らない
+		waitingForImmediateDeferred.push({
+			dfd: dfd,
+			value: value
+		});
+		if (!waitingImmediateTimer) {
+			waitingImmediateTimer = setTimeout(function() {
+				waitingImmediateTimer = null;
+				var dfds = waitingForImmediateDeferred
+						.splice(0, waitingForImmediateDeferred.length);
+				for (var i = 0, l = dfds.length; i < l; i++) {
+					dfds[i].dfd.resolve(dfds[i].value);
+				}
+			}, 0);
+		}
 	}
 
 	// デフォルトリゾルバの登録
@@ -5828,10 +6087,7 @@ var h5internal = {
 	 */
 	h5.u.obj.expose('h5.res', {
 		dependsOn: dependsOn,
-		addResolver: addResolver,
 		isDependency: isDependency,
-		urlLoader: urlLoader,
-		resolvers: resolvers,
 		register: register,
 		get: get
 	});
@@ -5950,6 +6206,8 @@ var h5internal = {
 	var ERR_CODE_CONTROLLER_UNMANAGE_CHILD_NOT_CHILD_CONTROLLER = 6044;
 	/** エラーコード：unmanageChildの第1引数がルートエレメント未決定コントローラで、第2引数がfalse */
 	var ERR_CODE_CONTROLLER_UNMANAGE_CHILD_NO_ROOT_ELEMENT = 6045;
+	/** エラーコード: コントローラのデフォルトパラメータが不正 */
+	var ERR_CODE_CONTROLLER_INVALID_INIT_DEFAULT_PARAM = 6046;
 
 	// =============================
 	// Development Only
@@ -6005,6 +6263,7 @@ var h5internal = {
 	errMsgMap[ERR_CODE_CONTROLLER_UNMANAGE_CHILD_BY_UNBINDED_CONTROLLER] = 'アンバインドされたコントローラのunmanageChildは呼び出せません';
 	errMsgMap[ERR_CODE_CONTROLLER_UNMANAGE_CHILD_NOT_CHILD_CONTROLLER] = 'unmanageChildの第1引数は呼び出し側の子コントローラである必要があります。';
 	errMsgMap[ERR_CODE_CONTROLLER_UNMANAGE_CHILD_NO_ROOT_ELEMENT] = 'ルートエレメントの決定していない子コントローラのunmanageChildは、第2引数にfalseを指定することはできません';
+	errMsgMap[ERR_CODE_CONTROLLER_INVALID_INIT_DEFAULT_PARAM] = 'コントローラ"{0}"のデフォルトパラメータ(__defaultArgs)がプレーンオブジェクトではありません。デフォルトパラメータにはプレーンオブジェクトを設定してください。';
 	addFwErrorCodeMap(errMsgMap);
 	/* del end */
 
@@ -6076,6 +6335,11 @@ var h5internal = {
 		}
 		return false;
 	})();
+
+	/**
+	 * コントローラ化時に呼ばれるフック関数の配列
+	 */
+	var controllerInstantiationHooks = [];
 
 	// =============================
 	// Functions
@@ -6155,8 +6419,27 @@ var h5internal = {
 	 * @param {Object} controllerDefObj
 	 * @param {String} controllerName
 	 */
-	function validateControllerDef(isRoot, targetElement, controllerDefObj, param, controllerName) {
+	function validateControllerDef(isRoot, targetElement, controllerDefObj, controllerName) {
 		// コントローラ定義オブジェクトに、コントローラが追加するプロパティと重複するプロパティがあるかどうかチェック
+		if (!controllerPropertyMap) {
+			// 重複チェックが初めて呼ばれた時にコントローラプロパティマップを生成してチェックで使用する
+			controllerPropertyMap = {};
+			var tempInstance = new Controller(null, 'a');
+			for ( var p in tempInstance) {
+				if (tempInstance.hasOwnProperty(p) && p !== '__name' && p !== '__templates'
+						&& p !== '__meta') {
+					controllerPropertyMap[p] = 1;
+				}
+			}
+			tempInstance = null;
+			var proto = Controller.prototype;
+			for ( var p in proto) {
+				if (proto.hasOwnProperty(p)) {
+					controllerPropertyMap[p] = null;
+				}
+			}
+			proto = null;
+		}
 		for ( var prop in controllerDefObj) {
 			if (prop in controllerPropertyMap) {
 				// コントローラが追加するプロパティと同じプロパティ名のものがあればエラー
@@ -6256,49 +6539,6 @@ var h5internal = {
 	}
 
 	// ----------------------------- コントローラ定義オブジェクトのチェック関数ここまで -----------------------------
-
-	/**
-	 * 子コントローラRequestクラス
-	 *
-	 * @param {String} selector セレクタ
-	 */
-	function Request(selector) {
-		var $target = $(selector);
-
-		this._controller = null;
-
-		// FIXME エラーメッセージ作成する
-		if ($target.length === 0) {
-			// 要素が0個の場合はnullにして終了
-			this._targetElement = null;
-			return;
-		} else if ($target.length > 1) {
-			// 要素が複数ある場合はエラー
-			throwFwError(ERR_CODE_BIND_TOO_MANY_TARGET);
-		} else if ($target[0].nodeType !== NODE_TYPE_DOCUMENT
-				&& $target[0].nodeType !== NODE_TYPE_ELEMENT) {
-			// ノードエレメントでない場合はエラー
-			throwFwError(ERR_CODE_BIND_NOT_NODE);
-		} else {
-			this._targetElement = $target[0];
-		}
-
-
-		// 既にコントローラがバインドされているか
-		var controllers = h5.core.controllerManager.getController(this._controller);
-		if (controllers.length > 1) {
-			// 複数バインドされている場合はエラー
-			// TODO
-			throwFwError();
-		}
-		if (controllers.length == 1) {
-			this._controller = controllres[0];
-		} else if (controllers.length === 0) {
-			var controllerName = $target.data('h5-controller');
-			this._controller = h5.res.dependsOn(controllerName);
-		}
-	}
-
 	/**
 	 * イベントコンテキストクラス イベントコンテキストの中に格納する
 	 *
@@ -6755,21 +6995,52 @@ var h5internal = {
 	function createBindObjects(controller, eventHandlerInfo, func) {
 		var selector = eventHandlerInfo.selector;
 		var eventName = eventHandlerInfo.eventName;
+		var bindTarget = eventHandlerInfo.bindTarget;
+		var isGlobal = eventHandlerInfo.isGlobal;
+		var isBindRequested = eventHandlerInfo.isBindRequested;
 		// ハンドラを取得(アスペクト適用済み)
 		// この関数の戻り値になるバインドオブジェクトの配列
 		// 結果は必ず配列になるようにする
 		var bindObjects;
 		switch (eventName) {
 		case 'mousewheel':
-			bindObjects = getNormalizeMouseWheelBindObj(controller, selector, eventName, func);
+			bindObjects = getNormalizeMouseWheelBindObj(controller, eventName, func);
 			break;
 		case EVENT_NAME_H5_TRACKSTART:
 		case EVENT_NAME_H5_TRACKMOVE:
 		case EVENT_NAME_H5_TRACKEND:
-			bindObjects = getH5TrackBindObj(controller, selector, eventName, func);
+			bindObjects = getH5TrackBindObj(controller, eventName, func);
+			// バインド対象要素またはセレクタについてトラックイベントの何れかのハンドラが初めてだった場合は、
+			// h5trackxxxイベントハンドラについてのバインドオブジェクトに加えて、
+			// トラックイベントをmousedown,touchstart時に有効にするためのイベントハンドラをバインド
+			var context = controller.__controllerContext;
+			var alreadyBound = false;
+			context.h5trackEventHandlerInfos = context.h5trackEventHandlerInfos || [];
+			var h5trackEventHandlerInfos = context.h5trackEventHandlerInfos;
+			for (var i = 0, l = h5trackEventHandlerInfos.length; i < l; i++) {
+				var info = h5trackEventHandlerInfos[i];
+				if (bindTarget) {
+					// ターゲット指定の場合はbindTargetを比較
+					if (isSameBindTarget(bindTarget, info.bindTarget)) {
+						alreadyBound = true;
+						break;
+					}
+				} else {
+					// セレクタを指定された場合は、セレクタと、グローバル指定かどうかと、isBindRequested指定を比較
+					if (selector === info.selector && isGlobal === info.isGlobal
+							&& isBindRequested === info.isBindRequested) {
+						alreadyBound = true;
+						break;
+					}
+				}
+			}
+			if (!alreadyBound) {
+				bindObjects = getBindObjForEnableH5track(controller).concat(bindObjects);
+				h5trackEventHandlerInfos.push(eventHandlerInfo);
+			}
 			break;
 		default:
-			bindObjects = getNormalBindObj(controller, selector, eventName, func);
+			bindObjects = getNormalBindObj(controller, eventName, func);
 			break;
 		}
 		// 配列にする
@@ -6782,7 +7053,11 @@ var h5internal = {
 		function wrapHandler(bindObj) {
 			var handler = bindObj.handler;
 			var c = bindObj.controller;
-			bindObj.originalHandler = handler;
+			// h5track*のオフセット計算等のためにすでにhandlerにはFW側でラップ済みの関数を持っている場合がある
+			// その場合は、bindObj.originalHandlerにすでにラップ前の関数を持たせてある
+			if (!bindObj.originalHandler) {
+				bindObj.originalHandler = handler;
+			}
 			bindObj.handler = function(/* var args */) {
 				// isNativeBindがtrue(addEventListenerによるバインド)なら、イベントハンドラのthisをイベントハンドラの第2引数にする。
 				// (DOM要素でないものはlistenerElementTypeに関わらずjQueryで包まない)
@@ -6795,14 +7070,16 @@ var h5internal = {
 				handler.call(c, createEventContext(bindObj, arguments), currentTargetShortcut);
 			};
 		}
+
 		for (var i = 0, l = bindObjects.length; i < l; i++) {
 			var bindObject = bindObjects[i];
 			// handlerをラップ
 			wrapHandler(bindObject);
 			// eventHandlerInfoから、bindObjに必要なものを持たせる
-			bindObject.isBindRequested = eventHandlerInfo.isBindRequested;
-			bindObject.isGlobal = eventHandlerInfo.isGlobal;
-			bindObject.bindTarget = eventHandlerInfo.bindTarget;
+			bindObject.isBindRequested = isBindRequested;
+			bindObject.isGlobal = isGlobal;
+			bindObject.bindTarget = bindTarget;
+			bindObject.selector = selector;
 			// コントローラを持たせる
 			bindObject.controller = controller;
 		}
@@ -7244,21 +7521,22 @@ var h5internal = {
 						delete context.postInitDfd;
 						postInitDfd.resolveWith(controller);
 						// postInitPromiseのdoneハンドラでunbindまたはdisposeされている場合は何もしない
-						if (isUnbinding(controller)) {
+						// また、すでにバインド実行済みなら何もしない
+						if (isUnbinding(controller) || context.isExecutedBind) {
 							return;
 						}
 						if (!context.isRoot) {
+							// 子コントローラの場合
 							if (!controller.rootController.isPostInit) {
-								// postInitDfdをresolveした時にルートのpostInitが終わった場合や、
-								// このコントローラがルートのpostInit後にmanageChildされた場合は、
-								// 既にルートコントローラのpostInitが終わっている。
-								// その場合は何もしない
+								// 通常、この時点ではルートのpostInitは未完了であり、
+								// 以降の処理(イベントハンドラのバインドとtriggerReady)は、
+								// ルートのpostInit後の処理で行うので何もしない
 								return;
 							}
-							// ルートのpostInitが終わっている場合、
-							// このコントローラがルートのpostInit後に実行されたので、
-							// ルートがtriggerReadyしたタイミングでは自分のreadyの実行が呼び出せていない。
-							// 自分についてのpostInit後の処理(バインド処理)を行って再度triggerReadyを呼ぶ
+							// ただし、例えばrootの__readyのタイミングでこのコントローラがmanageChildで子コントローラになったなどの場合は、
+							// この時点でルートのpostInit後の処理が終わっている。
+							// その場合、このコントローラのイベントハンドラのバインドは自分で行い、
+							// かつこのコントローラの__readyを実行するためtriggerReadyを呼び出す必要がある
 							if (!controller.parentController.__meta
 									|| controller.parentController.__meta.userHandlers !== false) {
 								bindByBindMap(controller);
@@ -7404,10 +7682,9 @@ var h5internal = {
 	 *          <li>bindObj.handler - イベントハンドラ</li>
 	 *          </ul>
 	 */
-	function getNormalBindObj(controller, selector, eventName, func) {
+	function getNormalBindObj(controller, eventName, func) {
 		return {
 			controller: controller,
-			selector: selector,
 			eventName: eventName,
 			handler: func
 		};
@@ -7418,21 +7695,18 @@ var h5internal = {
 	 *
 	 * @private
 	 * @param {Controller} controller コントローラ
-	 * @param {String} selector セレクタ
 	 * @param {String} eventName イベント名
 	 * @param {Function} func ハンドラとして登録したい関数
 	 * @returns {Object} バインドオブジェクト
 	 *          <ul>
 	 *          <li>bindObj.controller - コントローラ</li>
-	 *          <li>bindObj.selector - セレクタ</li>
 	 *          <li>bindObj.eventName - イベント名</li>
 	 *          <li>bindObj.handler - イベントハンドラ</li>
 	 *          </ul>
 	 */
-	function getNormalizeMouseWheelBindObj(controller, selector, eventName, func) {
+	function getNormalizeMouseWheelBindObj(controller, eventName, func) {
 		return {
 			controller: controller,
-			selector: selector,
 			// Firefoxには"mousewheel"イベントがない
 			eventName: typeof document.onmousewheel === TYPE_OF_UNDEFINED ? 'DOMMouseScroll'
 					: eventName,
@@ -7460,10 +7734,60 @@ var h5internal = {
 	 *
 	 * @private
 	 * @param {Controller} controller コントローラ
-	 * @param {String} selector セレクタ
 	 * @param {String} eventName イベント名 h5trackstart,h5trackmove,h5trackendのいずれか
 	 * @param {Function} func ハンドラとして登録したい関数
 	 * @returns {Object|Object[]} バインドオブジェクト
+	 *          <ul>
+	 *          <li>bindObj.controller - コントローラ</li>
+	 *          <li>bindObj.eventName - イベント名</li>
+	 *          <li>bindObj.handler - イベントハンドラ</li>
+	 *          </ul>
+	 */
+	function getH5TrackBindObj(controller, eventName, func) {
+		var normalBindObj = null;
+		if (eventName === EVENT_NAME_H5_TRACKSTART) {
+			// h5trackstartの場合
+			return getNormalBindObj(controller, eventName, func);
+		}
+		// h5trackmove,h5trackendの場合は、ハンドラ呼び出し前にオフセット計算処理を行うようラップする
+		normalBindObj = getNormalBindObj(controller, eventName, function(context) {
+			var event = context.event;
+			var h5DelegatingEvent = event.h5DelegatingEvent;
+			if (!h5DelegatingEvent) {
+				// マウスやタッチではなくtriggerで呼ばれた場合はオフセット正規化はしない
+				return func.apply(this, arguments);
+			}
+			// マウスイベントによる発火なら場合はオフセットを正規化する
+			var originalEventType = h5DelegatingEvent.type;
+			if (originalEventType === 'mousemove' || originalEventType === 'mouseup') {
+				var offset = $(event.currentTarget).offset() || {
+					left: 0,
+					top: 0
+				};
+				event.offsetX = event.pageX - offset.left;
+				event.offsetY = event.pageY - offset.top;
+			}
+			func.apply(this, arguments);
+		});
+		// ラップした関数をhandlerに持たせるので、ラップ前をoriginalHandlerに覚えておく
+		// ogirinalHandlerにはユーザが指定した関数と同じ関数(ラップ前)を持っていないとoff()でアンバインドできないため
+		normalBindObj.originalHandler = func;
+		return normalBindObj;
+	}
+
+	/**
+	 * hifiveの独自イベント"h5trackstart", "h5trackmove", "h5trackend"を対象のコントローラで有効にするためのハンドラを返します
+	 * <p>
+	 * h5trackハンドラは、mousedown,touchstartt時に動的にバインドし、mouseend,touchend時に動的にアンバインドしています。
+	 * </p>
+	 * <p>
+	 * この挙動を有効にするためのバインドオブジェクトを生成して返します。
+	 * </p>
+	 *
+	 * @private
+	 * @param {Controller} controller コントローラ
+	 * @param {string} selector セレクタ
+	 * @returns {Object[]} バインドオブジェクトの配列 mousedown,touchstartのバインドオブジェクト(touchが無い場合はmousedonwのみ)
 	 *          <ul>
 	 *          <li>bindObj.controller - コントローラ</li>
 	 *          <li>bindObj.selector - セレクタ</li>
@@ -7471,28 +7795,9 @@ var h5internal = {
 	 *          <li>bindObj.handler - イベントハンドラ</li>
 	 *          </ul>
 	 */
-	function getH5TrackBindObj(controller, selector, eventName, func) {
+	function getBindObjForEnableH5track(controller, selector) {
 		// タッチイベントがあるかどうか
 		var hasTouchEvent = typeof document.ontouchstart !== TYPE_OF_UNDEFINED;
-		if (eventName !== EVENT_NAME_H5_TRACKSTART) {
-			// h5trackmove,h5trackendはh5trackstart時にバインドするのでここでmouseやtouchにバインドするbindObjは作らない
-			// h5trackmoveまたはh5trackendのbindObjのみを返す
-			return getNormalBindObj(controller, selector, eventName, function(context) {
-				// マウスイベントによる発火なら場合はオフセットを正規化する
-				var originalEventType = context.event.h5DelegatingEvent.type;
-				if (originalEventType === 'mousemove' || originalEventType === 'mouseup') {
-					var event = context.event;
-					var offset = $(event.currentTarget).offset() || {
-						left: 0,
-						top: 0
-					};
-					event.offsetX = event.pageX - offset.left;
-					event.offsetY = event.pageY - offset.top;
-				}
-				func.apply(this, arguments);
-			});
-		}
-
 		function getEventType(en) {
 			switch (en) {
 			case 'touchstart':
@@ -7522,184 +7827,180 @@ var h5internal = {
 
 		var $document = $(getDocumentOf(controller.rootElement));
 
-		/**
-		 * トラックイベントの一連のイベントについてのbindObjを作る
-		 *
-		 * @private
-		 * @returns {Objects[]}
-		 */
-		function getBindObjects() {
-			// h5trackendイベントの最後でハンドラの除去を行う関数を格納するための変数
-			var removeHandlers = null;
-			var execute = false;
-			function getHandler(en, eventTarget, setup) {
-				return function(context) {
-					var type = getEventType(en);
-					var isStart = type === EVENT_NAME_H5_TRACKSTART;
-					if (isStart && execute) {
-						// スタートイベントが起きた時に実行中 = マルチタッチされた時なので、何もしない
-						return;
-					}
+		// h5trackendイベントの最後でハンドラの除去を行う関数を格納するための変数
+		var removeHandlers = null;
+		var execute = false;
+		function getHandler(en, eventTarget, setup) {
+			return function(context) {
+				var type = getEventType(en);
+				var isStart = type === EVENT_NAME_H5_TRACKSTART;
+				if (isStart && execute) {
+					// スタートイベントが起きた時に実行中 = マルチタッチされた時なので、何もしない
+					return;
+				}
 
-					// タッチイベントかどうか
-					var isTouch = context.event.type.indexOf('touch') === 0;
-					if (isTouch) {
-						// タッチイベントの場合、イベントオブジェクトに座標系のプロパティを付加
-						initTouchEventObject(context.event, en);
-					}
-					var newEvent = new $.Event(type);
-					copyEventObject(context.event, newEvent);
-					var target = context.event.target;
-					if (eventTarget) {
-						target = eventTarget;
-					}
-					if (setup) {
-						setup(newEvent);
-					}
+				// タッチイベントかどうか
+				var isTouch = context.event.type.indexOf('touch') === 0;
+				if (isTouch) {
+					// タッチイベントの場合、イベントオブジェクトに座標系のプロパティを付加
+					initTouchEventObject(context.event, en);
+				}
+				var newEvent = new $.Event(type);
+				copyEventObject(context.event, newEvent);
+				var target = context.event.target;
+				if (eventTarget) {
+					target = eventTarget;
+				}
+				if (setup) {
+					setup(newEvent);
+				}
 
-					// ------------- h5track*のトリガ処理 -------------
-					// originalEventがあればoriginalEvent、なければjQueryEventオブジェクトでh5track*をトリガしたかどうかのフラグを管理する
-					var triggeredFlagEvent = context.event.originalEvent || context.event;
+				// ------------- h5track*のトリガ処理 -------------
+				// originalEventがあればoriginalEvent、なければjQueryEventオブジェクトでh5track*をトリガしたかどうかのフラグを管理する
+				var triggeredFlagEvent = context.event.originalEvent || context.event;
 
-					if (isStart && $.inArray(triggeredFlagEvent, storedEvents) === -1) {
-						// スタート時で、かつこのスタートイベントがstoredEventsに入っていないなら
-						// トリガする前にトリガフラグ保管イベントのリセット(storedEventsに不要なイベントオブジェクトを残さないため)
+				if (isStart && $.inArray(triggeredFlagEvent, storedEvents) === -1) {
+					// スタート時で、かつこのスタートイベントがstoredEventsに入っていないなら
+					// トリガする前にトリガフラグ保管イベントのリセット(storedEventsに不要なイベントオブジェクトを残さないため)
+					storedEvents = [];
+					h5trackTriggeredFlags = [];
+				}
+
+				var index = $.inArray(triggeredFlagEvent, storedEvents);
+				if (index === -1) {
+					// storedEventsにイベントが登録されていなければ追加し、トリガ済みフラグにfalseをセットする
+					index = storedEvents.push(triggeredFlagEvent) - 1;
+					h5trackTriggeredFlags[index] = false;
+				}
+				// sotredEventsにイベントが登録されていれば、そのindexからトリガ済みフラグを取得する
+				var triggeredFlag = h5trackTriggeredFlags[index];
+
+				if (!triggeredFlag && (!isTouch || execute || isStart)) {
+					// 親子コントローラで複数のイベントハンドラが同じイベントにバインドされているときに、
+					// それぞれがトリガしてイベントハンドラがループしないように制御している。
+					// マウス/タッチイベントがh5track*にトリガ済みではない時にトリガする。
+					// タッチイベントの場合、h5track中でないのにmoveやtouchendが起きた時は何もしない。
+					// タッチイベントの場合はターゲットにバインドしており(マウスの場合はdocument)、
+					// バブリングによって同じイベントが再度トリガされるのを防ぐためである。
+
+					// トリガ済みフラグを立てる
+					h5trackTriggeredFlags[index] = true;
+					// h5track*イベントをトリガ
+					$(target).trigger(newEvent, context.evArg);
+					execute = true;
+				}
+
+				// 不要なイベントオブジェクトを残さないため、
+				// documentだったら現在のイベントとそのフラグをstoredEvents/h5trackTriggeredFlagsから外す
+				// h5trackend時ならstoredEvents/h5trackTtriggeredFlagsをリセットする
+				// (※ documentまでバブリングすればイベントオブジェクトを保管しておく必要がなくなるため)
+				if (context.event.currentTarget === document) {
+					if (type === EVENT_NAME_H5_TRACKEND) {
 						storedEvents = [];
 						h5trackTriggeredFlags = [];
 					}
-
-					var index = $.inArray(triggeredFlagEvent, storedEvents);
-					if (index === -1) {
-						// storedEventsにイベントが登録されていなければ追加し、トリガ済みフラグにfalseをセットする
-						index = storedEvents.push(triggeredFlagEvent) - 1;
-						h5trackTriggeredFlags[index] = false;
+					var storedIndex = $.inArray(triggeredFlagEvent, storedEvents);
+					if (storedIndex !== -1) {
+						storedEvents.splice(index, 1);
+						h5trackTriggeredFlags.splice(index, 1);
 					}
-					// sotredEventsにイベントが登録されていれば、そのindexからトリガ済みフラグを取得する
-					var triggeredFlag = h5trackTriggeredFlags[index];
+				}
+				// ------------- h5track*のトリガ処理 ここまで -------------
 
-					if (!triggeredFlag && (!isTouch || execute || isStart)) {
-						// 親子コントローラで複数のイベントハンドラが同じイベントにバインドされているときに、
-						// それぞれがトリガしてイベントハンドラがループしないように制御している。
-						// マウス/タッチイベントがh5track*にトリガ済みではない時にトリガする。
-						// タッチイベントの場合、h5track中でないのにmoveやtouchendが起きた時は何もしない。
-						// タッチイベントの場合はターゲットにバインドしており(マウスの場合はdocument)、
-						// バブリングによって同じイベントが再度トリガされるのを防ぐためである。
+				if (isStart && execute) {
+					// スタートイベント、かつ今h5trackstartをトリガしたところなら、
+					// h5trackmove,endを登録
 
-						// トリガ済みフラグを立てる
-						h5trackTriggeredFlags[index] = true;
-						// h5track*イベントをトリガ
-						$(target).trigger(newEvent, context.evArg);
-						execute = true;
-					}
-
-					// 不要なイベントオブジェクトを残さないため、
-					// documentだったら現在のイベントとそのフラグをstoredEvents/h5trackTriggeredFlagsから外す
-					// h5trackend時ならstoredEvents/h5trackTtriggeredFlagsをリセットする
-					// (※ documentまでバブリングすればイベントオブジェクトを保管しておく必要がなくなるため)
-					if (context.event.currentTarget === document) {
-						if (type === EVENT_NAME_H5_TRACKEND) {
-							storedEvents = [];
-							h5trackTriggeredFlags = [];
-						}
-						var storedIndex = $.inArray(triggeredFlagEvent, storedEvents);
-						if (storedIndex !== -1) {
-							storedEvents.splice(index, 1);
-							h5trackTriggeredFlags.splice(index, 1);
-						}
-					}
-					// ------------- h5track*のトリガ処理 ここまで -------------
-
-					if (isStart && execute) {
-						// スタートイベント、かつ今h5trackstartをトリガしたところなら、
-						// h5trackmove,endを登録
-
+					// トラック操作で文字列選択やスクロールなどが起きないように元のイベントのpreventDefault()を呼ぶ
+					// ただし、h5trackstartがpreventDefault()されていたら、元のイベントのpreventDefault()は呼ばない
+					if (!newEvent.isDefaultPrevented()) {
 						newEvent.h5DelegatingEvent.preventDefault();
-						var nt = newEvent.target;
-
-						// 直前のh5track系イベントとの位置の差分を格納
-						var ox = newEvent.clientX;
-						var oy = newEvent.clientY;
-						var setupDPos = function(ev) {
-							var cx = ev.clientX;
-							var cy = ev.clientY;
-							ev.dx = cx - ox;
-							ev.dy = cy - oy;
-							ox = cx;
-							oy = cy;
-						};
-
-						// h5trackstart実行時に、move、upのハンドラを作成して登録する。
-						// コンテキストをとるように関数をラップして、bindする。
-						// touchstartで発火したならtouchstart,touchendにバインド、
-						// そうでない場合(mousedown)ならmousemove,mousenendにバインド
-						var moveEventType = isTouch ? 'touchmove' : 'mousemove';
-						var endEventType = isTouch ? 'touchend' : 'mouseup';
-						var moveHandler = getHandler(moveEventType, nt, setupDPos);
-						var upHandler = getHandler(endEventType, nt);
-						var moveHandlerWrapped = function(e) {
-							context.event = e;
-							context.evArg = handlerArgumentsToContextEvArg(arguments);
-							moveHandler(context);
-						};
-						var upHandlerWrapped = function(e) {
-							context.event = e;
-							context.evArg = handlerArgumentsToContextEvArg(arguments);
-							upHandler(context);
-						};
-
-						// タッチならイベントの起きた要素、マウスならdocumentにバインド
-						var $bindTarget = isTouch ? $(nt) : $document;
-						// moveとendのunbindをする関数
-						removeHandlers = function() {
-							storedEvents = [];
-							h5trackTriggeredFlags = [];
-							$bindTarget.unbind(moveEventType, moveHandlerWrapped);
-							$bindTarget.unbind(endEventType, upHandlerWrapped);
-							if (!isTouch && controller.rootElement !== document) {
-								$(controller.rootElement).unbind(moveEventType, moveHandlerWrapped);
-								$(controller.rootElement).unbind(endEventType, upHandlerWrapped);
-							}
-						};
-						// h5trackmoveとh5trackendのbindを行う
-						$bindTarget.bind(moveEventType, moveHandlerWrapped);
-						$bindTarget.bind(endEventType, upHandlerWrapped);
-
-						// タッチでなく、かつコントローラのルートエレメントがdocumentでなかったら、ルートエレメントにもバインドする
-						// タッチイベントでない場合、move,endをdocumentにバインドしているが、途中でmousemove,mouseupを
-						// stopPropagationされたときに、h5trackイベントを発火することができなくなる。
-						// コントローラのルートエレメント外でstopPropagationされていた場合を考慮して、
-						// ルートエレメントにもmove,endをバインドする。
-						// (ルートエレメントの内側でstopPropagationしている場合は考慮しない)
-						// (タッチの場合はターゲットはstart時の要素なので2重にバインドする必要はない)
-						if (!isTouch && controller.rootElement !== document) {
-							// h5trackmoveとh5trackendのbindを行う
-							$(controller.rootElement).bind(moveEventType, moveHandlerWrapped);
-							$(controller.rootElement).bind(endEventType, upHandlerWrapped);
-						}
-					} else if (type === EVENT_NAME_H5_TRACKEND) {
-						// touchend,mousup時(=h5trackend時)にmoveとendのイベントをunbindする
-						removeHandlers();
-						execute = false;
 					}
-				};
-			}
-			function createBindObj(en) {
-				return {
-					controller: controller,
-					selector: selector,
-					eventName: en,
-					handler: getHandler(en)
-				};
-			}
-			var bindObjects = [getNormalBindObj(controller, selector, eventName, func)];
-			if (hasTouchEvent) {
-				// タッチがあるならタッチにもバインド
-				bindObjects.push(createBindObj('touchstart'));
-			}
-			bindObjects.push(createBindObj('mousedown'));
-			return bindObjects;
+					var nt = newEvent.target;
+
+					// 直前のh5track系イベントとの位置の差分を格納
+					var ox = newEvent.clientX;
+					var oy = newEvent.clientY;
+					var setupDPos = function(ev) {
+						var cx = ev.clientX;
+						var cy = ev.clientY;
+						ev.dx = cx - ox;
+						ev.dy = cy - oy;
+						ox = cx;
+						oy = cy;
+					};
+
+					// h5trackstart実行時に、move、upのハンドラを作成して登録する。
+					// コンテキストをとるように関数をラップして、bindする。
+					// touchstartで発火したならtouchstart,touchendにバインド、
+					// そうでない場合(mousedown)ならmousemove,mousenendにバインド
+					var moveEventType = isTouch ? 'touchmove' : 'mousemove';
+					var endEventType = isTouch ? 'touchend' : 'mouseup';
+					var moveHandler = getHandler(moveEventType, nt, setupDPos);
+					var upHandler = getHandler(endEventType, nt);
+					var moveHandlerWrapped = function(e) {
+						context.event = e;
+						context.evArg = handlerArgumentsToContextEvArg(arguments);
+						moveHandler(context);
+					};
+					var upHandlerWrapped = function(e) {
+						context.event = e;
+						context.evArg = handlerArgumentsToContextEvArg(arguments);
+						upHandler(context);
+					};
+
+					// タッチならイベントの起きた要素、マウスならdocumentにバインド
+					var $bindTarget = isTouch ? $(nt) : $document;
+					// moveとendのunbindをする関数
+					removeHandlers = function() {
+						storedEvents = [];
+						h5trackTriggeredFlags = [];
+						$bindTarget.unbind(moveEventType, moveHandlerWrapped);
+						$bindTarget.unbind(endEventType, upHandlerWrapped);
+						if (!isTouch && controller.rootElement !== document) {
+							$(controller.rootElement).unbind(moveEventType, moveHandlerWrapped);
+							$(controller.rootElement).unbind(endEventType, upHandlerWrapped);
+						}
+					};
+					// h5trackmoveとh5trackendのbindを行う
+					$bindTarget.bind(moveEventType, moveHandlerWrapped);
+					$bindTarget.bind(endEventType, upHandlerWrapped);
+
+					// タッチでなく、かつコントローラのルートエレメントがdocumentでなかったら、ルートエレメントにもバインドする
+					// タッチイベントでない場合、move,endをdocumentにバインドしているが、途中でmousemove,mouseupを
+					// stopPropagationされたときに、h5trackイベントを発火することができなくなる。
+					// コントローラのルートエレメント外でstopPropagationされていた場合を考慮して、
+					// ルートエレメントにもmove,endをバインドする。
+					// (ルートエレメントの内側でstopPropagationしている場合は考慮しない)
+					// (タッチの場合はターゲットはstart時の要素なので2重にバインドする必要はない)
+					if (!isTouch && controller.rootElement !== document) {
+						// h5trackmoveとh5trackendのbindを行う
+						$(controller.rootElement).bind(moveEventType, moveHandlerWrapped);
+						$(controller.rootElement).bind(endEventType, upHandlerWrapped);
+					}
+				} else if (type === EVENT_NAME_H5_TRACKEND) {
+					// touchend,mousup時(=h5trackend時)にmoveとendのイベントをunbindする
+					removeHandlers();
+					execute = false;
+				}
+			};
 		}
-		return getBindObjects();
+		function createBindObj(en) {
+			return {
+				controller: controller,
+				selector: selector,
+				eventName: en,
+				handler: getHandler(en),
+				// コントローラが内部で使用するハンドラ。ポイントカットなどのアスペクトの影響を受けない。
+				isInnerBindObj: true
+			};
+		}
+		var bindObjects = [createBindObj('mousedown')];
+		if (hasTouchEvent) {
+			// タッチがあるならタッチにもバインド
+			bindObjects.push(createBindObj('touchstart'));
+		}
+		return bindObjects;
 	}
 
 	/**
@@ -7863,9 +8164,9 @@ var h5internal = {
 	 * @param {Controller} rootController ルートコントローラ
 	 * @returns {Object} argsを持つオブジェクト
 	 */
-	function createInitializationContext(rootController) {
+	function createInitializationContext(controller) {
 		return {
-			args: rootController.__controllerContext.args
+			args: controller.__controllerContext.args
 		};
 	}
 
@@ -7953,13 +8254,18 @@ var h5internal = {
 		}
 
 		// asyncにfalseが指定されていない場合は必ず非同期になるようにする
-		setTimeout(function() {
-			// この時点でcontrollerがルートコントローラでなくなっている(__constructでmanageChildされた)場合は何もしない
-			if (isUnbinding(controller) || !controller.__controllerContext.isRoot) {
-				return;
-			}
-			executeLifecycleEventChain(controller, '__init');
-		}, 0);
+		setTimeout(
+				function() {
+					// この時点でcontrollerがルートコントローラでなくなっている(__construct時などバインド後すぐにmanageChildされた)場合がある
+					// その場合はmanageChild()した側のルートコントローラのライフサイクルが完全に終わっている(===readyDfd削除まで終わっている)場合、
+					// 自分でtriggerInitする必要がある
+					// ルートのライフサイクルがまだ終わっていない場合は、親がライフサイクルを実行してくれるのでmanageChildされた側はtriggerInitしない
+					if (isUnbinding(controller)
+							|| (!controller.__controllerContext.isRoot && controller.rootController.readyDfd)) {
+						return;
+					}
+					executeLifecycleEventChain(controller, '__init');
+				}, 0);
 	}
 
 	/**
@@ -8831,7 +9137,7 @@ var h5internal = {
 	 * コントローラをエラー終了状態にして、lifecycleerrorイベントをトリガする
 	 *
 	 * @param {Controller} rootController ルートコントローラ
-	 * @param {Error||rejectReason} detail 例外オブジェクト、またはRejectReason
+	 * @param {Error|rejectReason} detail 例外オブジェクト、またはRejectReason
 	 */
 	function triggerLifecycleerror(rootController, detail) {
 		controllerManager.dispatchEvent({
@@ -8972,8 +9278,7 @@ var h5internal = {
 	// Body
 	//
 	// =========================================================================
-	function controllerFactory(controller, rootElement, controllerName, controllerDef, param,
-			isRoot) {
+	function controllerFactory(controller, rootElement, controllerName, controllerDef, args, isRoot) {
 
 		/**
 		 * コントローラ名.
@@ -9037,11 +9342,24 @@ var h5internal = {
 			 *
 			 * @type {Object}
 			 */
-			controllerDef: controllerDef
+			controllerDef: controllerDef,
+
+			/**
+			 * コントローラパラメータ
+			 */
+			args: null
 		};
 
-		// 初期化パラメータをセット（クローンはしない #163）
-		controller.__controllerContext.args = param ? param : null;
+		// 初期化パラメータをセット
+		// パラメータもデフォルトパラメータも指定の無い場合はnull
+		var defaultParam = controllerDef && controllerDef.__defaultArgs;
+		if (defaultParam) {
+			// デフォルトパラメーターとマージする (#474)
+			controller.__controllerContext.args = $.extend({}, defaultParam, args);
+		} else if (args) {
+			// デフォルトパラメータの無い場合はクローンせずにparamをそのままセット（#163）
+			controller.__controllerContext.args = args;
+		}
 
 		/**
 		 * コントローラのライフサイクルイベント__initが終了したかどうかを返します。
@@ -9372,11 +9690,15 @@ var h5internal = {
 	 * @param {Element} rootElement コントローラをバインドした要素
 	 * @param {String} controllerName コントローラ名
 	 * @param {Object} controllerDef コントローラ定義オブジェクト
-	 * @param {Object} param 初期化パラメータ
+	 * @param {Object} args 初期化パラメータ
 	 * @param {Boolean} isRoot ルートコントローラかどうか
 	 */
-	function Controller(rootElement, controllerName, controllerDef, param, isRoot) {
-		return controllerFactory(this, rootElement, controllerName, controllerDef, param, isRoot);
+	function Controller(rootElement, controllerName, controllerDef, args, isRoot) {
+		// フック関数を実行
+		for (var i = 0, l = controllerInstantiationHooks.length; i < l; i++) {
+			controllerInstantiationHooks[i](this);
+		}
+		return controllerFactory(this, rootElement, controllerName, controllerDef, args, isRoot);
 	}
 	$
 			.extend(
@@ -9737,11 +10059,22 @@ var h5internal = {
 							throwErrorIfNoRootElement(this, 'on');
 							// バインドオブジェクトの作成
 							var info = createEventHandlerInfo(target, eventName, this);
-							var bindObjects = createBindObjects(this, info, listener);
 
-							// バインドオブジェクトに基づいてバインド
+							// アスペクトを掛ける
+							// onで動的に追加されたハンドラは、メソッド名は空文字扱とする
+							// アスペクトのpointCutの対象や、invocation.funcNameは空文字とする
+							var methodName = '';
+							// enable/disableListeners()のために制御用インターセプタも織り込む
+							var interceptors = getInterceptors(this.__name, methodName);
+							interceptors.push(executeListenersInterceptor);
+							var bindObjects = createBindObjects(this, info, createWeavedFunction(
+									listener, methodName, interceptors));
 							for (var i = 0, l = bindObjects.length; i < l; i++) {
 								var bindObj = bindObjects[i];
+								if (!bindObj.isInnerBindObj) {
+									// h5track*を有効にするハンドラを除いて、オリジナルハンドラを覚えて置き、off()できるようにする
+									bindObj.originalHandler = listener;
+								}
 								bindByBindObject(bindObj, getDocumentOf(this.rootElement));
 							}
 						},
@@ -9805,6 +10138,7 @@ var h5internal = {
 						 * 追加されたコントローラは呼び出し元のコントローラの子コントローラとなります。
 						 * </p>
 						 *
+						 * @memberOf Controller
 						 * @param {Controller} コントローラインスタンス
 						 */
 						manageChild: function(controller) {
@@ -9841,6 +10175,7 @@ var h5internal = {
 						/**
 						 * 子コントローラを動的に削除
 						 *
+						 * @memberOf Controller
 						 * @param {Controller} コントローラインスタンス
 						 * @param {Boolean} [andDispose=true]
 						 *            第1引数で指定されたコントローラをdisposeするかどうか。指定無しの場合はdisposeします。
@@ -9901,7 +10236,107 @@ var h5internal = {
 							} else if (!this.rootController.__controllerContext.triggerReadyInitExecuted) {
 								triggerReady(controller);
 							}
-						}
+						},
+
+					// 以下JSDocコメントのみ
+					/**
+					 * コントローラのライフサイクル __construct
+					 * <p>
+					 * コントローラ生成時に実行されるライフサイクルメソッドの一つ。コントローラ定義オブジェクトの__constructに関数を記述することで動作する。
+					 * 指定はオプションであり、記述しなくてもよい。
+					 * </p>
+					 * <p>
+					 * コントローラ生成時のライフサイクルメソッドは{@link Controller.__construct},
+					 * {@link Controller.__init}, {@link Controller.__postInit},
+					 * {@link Controller.__ready}の順序で動作する。
+					 * </p>
+					 *
+					 * @see {@link http://www.htmlhifive.com/conts/web/view/reference/controller_lifecycle|リファレンス（仕様詳細） » コントローラのライフサイクルについて}
+					 * @memberOf Controller
+					 * @type {function}
+					 * @name __construct
+					 */
+					/**
+					 * コントローラのライフサイクル __init
+					 * <p>
+					 * コントローラ生成時に実行されるライフサイクルメソッドの一つ。コントローラ定義オブジェクトの__initに関数を記述することで動作する。
+					 * 指定はオプションであり、記述しなくてもよい。
+					 * </p>
+					 * <p>
+					 * コントローラ生成時のライフサイクルメソッドは{@link Controller.__construct},
+					 * {@link Controller.__init}, {@link Controller.__postInit},
+					 * {@link Controller.__ready}の順序で動作する。
+					 * </p>
+					 *
+					 * @see {@link http://www.htmlhifive.com/conts/web/view/reference/controller_lifecycle|リファレンス（仕様詳細） » コントローラのライフサイクルについて}
+					 * @memberOf Controller
+					 * @type {function}
+					 * @name __init
+					 */
+					/**
+					 * コントローラのライフサイクル __postInit
+					 * <p>
+					 * コントローラ生成時に実行されるライフサイクルメソッドの一つ。コントローラ定義オブジェクトの__postInitに関数を記述することで動作する。
+					 * 指定はオプションであり、記述しなくてもよい。
+					 * </p>
+					 * <p>
+					 * コントローラ生成時のライフサイクルメソッドは{@link Controller.__construct},
+					 * {@link Controller.__init}, {@link Controller.__postInit},
+					 * {@link Controller.__ready}の順序で動作する。
+					 * </p>
+					 *
+					 * @see {@link http://www.htmlhifive.com/conts/web/view/reference/controller_lifecycle|リファレンス（仕様詳細） » コントローラのライフサイクルについて}
+					 * @memberOf Controller
+					 * @type {function}
+					 * @name __postInit
+					 */
+					/**
+					 * コントローラのライフサイクル __ready
+					 * <p>
+					 * コントローラ生成時に実行されるライフサイクルメソッドの一つ。コントローラ定義オブジェクトの__readyに関数を記述することで動作する。
+					 * 指定はオプションであり、記述しなくてもよい。
+					 * </p>
+					 * <p>
+					 * コントローラ生成時のライフサイクルメソッドは{@link Controller.__construct},
+					 * {@link Controller.__init}, {@link Controller.__postInit},
+					 * {@link Controller.__ready}の順序で動作する。
+					 * </p>
+					 *
+					 * @see {@link http://www.htmlhifive.com/conts/web/view/reference/controller_lifecycle|リファレンス（仕様詳細） » コントローラのライフサイクルについて}
+					 * @memberOf Controller
+					 * @type {function}
+					 * @name __ready
+					 */
+					/**
+					 * コントローラのライフサイクル __unbind
+					 * <p>
+					 * コントローラの破棄時に実行されるライフサイクルメソッドの一つ。コントローラ定義オブジェクトの__unbindに関数を記述することで動作する。
+					 * 指定はオプションであり、記述しなくてもよい。
+					 * </p>
+					 * <p>
+					 * コントローラ破棄時のライフサイクルメソッドは{@link Controller.__unbind},{@link Controller.__dispose}の順序で動作する。
+					 * </p>
+					 *
+					 * @see {@link http://www.htmlhifive.com/conts/web/view/reference/controller_lifecycle|リファレンス（仕様詳細） » コントローラのライフサイクルについて}
+					 * @memberOf Controller
+					 * @type {function}
+					 * @name __unbind
+					 */
+					/**
+					 * コントローラのライフサイクル __dispose
+					 * <p>
+					 * コントローラの破棄時に実行されるライフサイクルメソッドの一つ。コントローラ定義オブジェクトの__disposeに関数を記述することで動作する。
+					 * 指定はオプションであり、記述しなくてもよい。
+					 * </p>
+					 * <p>
+					 * コントローラ破棄時のライフサイクルメソッドは{@link Controller.__unbind},{@link Controller.__dispose}の順序で動作する。
+					 * </p>
+					 *
+					 * @see {@link http://www.htmlhifive.com/conts/web/view/reference/controller_lifecycle|リファレンス（仕様詳細） » コントローラのライフサイクルについて}
+					 * @memberOf Controller
+					 * @type {function}
+					 * @name __dispose
+					 */
 					});
 
 	/**
@@ -10104,25 +10539,7 @@ var h5internal = {
 	});
 
 	// プロパティ重複チェック用のコントローラプロパティマップを作成
-	var controllerPropertyMap = (function() {
-		var ret = {};
-		var tempInstance = new Controller(null, 'a');
-		for ( var p in tempInstance) {
-			if (tempInstance.hasOwnProperty(p) && p !== '__name' && p !== '__templates'
-					&& p !== '__meta') {
-				ret[p] = 1;
-			}
-		}
-		tempInstance = null;
-		var proto = Controller.prototype;
-		for ( var p in proto) {
-			if (proto.hasOwnProperty(p)) {
-				ret[p] = null;
-			}
-		}
-		proto = null;
-		return ret;
-	})();
+	var controllerPropertyMap = null;
 
 	/**
 	 * コントローラのファクトリ
@@ -10134,7 +10551,7 @@ var h5internal = {
 	 * @returns {Controller}
 	 */
 	// fwOptは内部的に使用している.
-	function createAndBindController(targetElement, controllerDefObj, param, fwOpt) {
+	function createAndBindController(targetElement, controllerDefObj, args, fwOpt) {
 		// 内部から再帰的に呼び出された場合は、fwOpt.isInternalが指定されているはずなので、ルートコントローラかどうかはfwOpt.isInternalで判別できる
 		var isRoot = !fwOpt || !fwOpt.isInternal;
 		if (!isRoot && isDisposed(fwOpt.rootController)) {
@@ -10156,7 +10573,7 @@ var h5internal = {
 		fwLogger.debug(FW_LOG_INIT_CONTROLLER_BEGIN, controllerName);
 
 		// 初期化パラメータがオブジェクトかどうかチェック
-		if (param && !$.isPlainObject(param)) {
+		if (args && !$.isPlainObject(args)) {
 			throwFwError(ERR_CODE_CONTROLLER_INVALID_INIT_PARAM, [controllerName], {
 				controllerDefObj: controllerDefObj
 			});
@@ -10169,13 +10586,22 @@ var h5internal = {
 			});
 		}
 
+		// デフォルトパラメータがオブジェクトかどうかチェック
+		if (controllerDefObj.__defaultArgs) {
+			if (!$.isPlainObject(controllerDefObj.__defaultArgs)) {
+				throwFwError(ERR_CODE_CONTROLLER_INVALID_INIT_DEFAULT_PARAM, [controllerName], {
+					controllerDefObj: controllerDefObj
+				});
+			}
+		}
+
 		// キャッシュの取得(無かったらundefined)
 		var cache = definitionCacheManager.get(controllerName);
 
 		// コントローラ定義オブジェクトのチェック
 		// キャッシュがある場合はコントローラ定義オブジェクトについてはチェック済みなのでチェックしない
 		if (!cache) {
-			validateControllerDef(isRoot, targetElement, controllerDefObj, param, controllerName);
+			validateControllerDef(isRoot, targetElement, controllerDefObj, controllerName);
 		}
 
 		// 循環参照チェックはキャッシュが残っていても行う
@@ -10201,7 +10627,7 @@ var h5internal = {
 		// new Controllerで渡すコントローラ定義オブジェクトはクローンしたものではなくオリジナルなものを渡す。
 		// コントローラが持つコントローラ定義オブジェクトはオリジナルのものになる。
 		var controller = new Controller(targetElement ? $(targetElement).get(0) : null,
-				controllerName, controllerDefObj, param, isRoot);
+				controllerName, controllerDefObj, args, isRoot);
 
 		var rootController = isRoot ? controller : fwOpt.rootController;
 
@@ -10392,17 +10818,24 @@ var h5internal = {
 
 		// 子コントローラをコントローラ化して持たせる
 		// 子コントローラがDependencyオブジェクトなら依存関係を解決
+		var meta = controller.__meta;
 		for (var i = 0, l = cache.childControllerProperties.length; i < l; i++) {
 			// createAndBindControllerの呼び出し時に、fwOpt.isInternalを指定して、内部からの呼び出し(=子コントローラ)であることが分かるようにする
 			var prop = cache.childControllerProperties[i];
 			var childController = clonedControllerDef[prop];
+			// 子コントローラにパラメータを引き継ぐかどうか
+			var childArgs = null;
+			if (meta && meta[prop] && meta[prop].inheritArgs) {
+				childArgs = args;
+			}
+
 			if (isDependency(childController)) {
 				// Dependencyオブジェクトが指定されていた場合は依存関係を解決する
 				var promise = childController.resolve('namespace');
 				promisesForTriggerInit.push(promise);
-				promise.done((function(childProp, childControllerPromise) {
+				promise.done((function(childProp, childControllerPromise, cp) {
 					return function(c) {
-						var child = createAndBindController(null, $.extend(true, {}, c), param, {
+						var child = createAndBindController(null, $.extend(true, {}, c), cp, {
 							isInternal: true,
 							parentController: controller,
 							rootController: rootController,
@@ -10420,10 +10853,10 @@ var h5internal = {
 						promisesForTriggerInit.splice($.inArray(childControllerPromise,
 								promisesForTriggerInit), 1);
 					};
-				})(prop, promise));
+				})(prop, promise, childArgs));
 			} else {
 				var child = createAndBindController(null, $.extend(true, {},
-						clonedControllerDef[prop]), param, {
+						clonedControllerDef[prop]), childArgs, {
 					isInternal: true,
 					parentController: controller,
 					rootController: rootController
@@ -10578,6 +11011,20 @@ var h5internal = {
 		return rootLogic;
 	}
 
+	/**
+	 * コントローラ化時にコントローラに対して追加処理を行うフック関数を登録する関数
+	 * <p>
+	 * ここで登録したフック関数はコントローラインスタンス生成時(__construct呼び出し前)に呼ばれます
+	 * </p>
+	 *
+	 * @memberOf h5internal.core
+	 * @private
+	 * @param {Function} func フック関数。第1引数にコントローラインスタンスが渡される
+	 */
+	function addControllerInstantiationHook(func) {
+		controllerInstantiationHooks.push(func);
+	}
+
 	// =============================
 	// Expose internally
 	// =============================
@@ -10585,7 +11032,8 @@ var h5internal = {
 	// fwOptを引数に取る、コントローラ化を行うメソッドを、h5internal.core.controllerInternalとして内部用に登録
 	h5internal.core.controllerInternal = createAndBindController;
 
-	h5internal.core.controllerConstructor = Controller;
+	// コントローラ化時にフック関数を登録する関数
+	h5internal.core.addControllerInstantiationHook = addControllerInstantiationHook;
 
 	h5internal.core.isDisposing = isDisposing;
 
@@ -10607,19 +11055,19 @@ var h5internal = {
 		 * @param {String|Element|jQuery} targetElement バインド対象とする要素のセレクタ、DOMエレメント、もしくはjQueryオブジェクト..<br />
 		 *            セレクタで指定したときにバインド対象となる要素が存在しない、もしくは2つ以上存在する場合、エラーとなります。
 		 * @param {Object} controllerDefObj コントローラ定義オブジェクト
-		 * @param {Object} [param] 初期化パラメータ.<br />
+		 * @param {Object} [args] 初期化パラメータ.<br />
 		 *            初期化パラメータは __construct, __init, __readyの引数として渡されるオブジェクトの argsプロパティとして格納されます。
 		 * @returns {Controller} コントローラ
 		 * @name controller
 		 * @function
 		 * @memberOf h5.core
 		 */
-		controller: function(targetElement, controllerDefObj, param) {
+		controller: function(targetElement, controllerDefObj, args) {
 			if (arguments.length < 2) {
 				throwFwError(ERR_CODE_CONTROLLER_TOO_FEW_ARGS);
 			}
 
-			return createAndBindController(targetElement, controllerDefObj, param);
+			return createAndBindController(targetElement, controllerDefObj, args);
 		},
 
 		logic: createLogic,
@@ -10651,15 +11099,6 @@ var h5internal = {
 				nsObj[key] = obj;
 				h5.u.obj.expose(ns, nsObj);
 			}
-		},
-
-		/**
-		 * セレクタから子コントローラ定義を行うオブジェクト
-		 *
-		 * @param {String} セレクタ
-		 */
-		childFrom: function(selector) {
-			return new Request(selector);
 		}
 	});
 })();
@@ -10840,16 +11279,25 @@ var h5internal = {
 	/** ORDER BY句に指定されたkey名がschemaに存在しない */
 	var ERR_CODE_ORDER_BY_KEY = 2;
 
-	/** ORDER BY句に指定された、昇順、降順の指定が不正 */
-	var ERR_CODE_ORDER_BY_CLAUSE = 3;
+	/** ORDER BY句に指定された比較関数が不正 */
+	var ERR_CODE_ORDER_BY_COMPARE_FUNCTION_INVALID = 3;
+
+	/** setOrderFunctionで既にオーダー関数が設定済みなのにaddOrderが呼ばれた */
+	var ERR_CODE_ALREADY_SET_ORDER_FUNCTION = 4;
+
+	/** addOrderで既にオーダーキーが追加済みなのにsetOrderFunctionが呼ばれた */
+	var ERR_CODE_ALREADY_ADDED_ORDER = 5;
 
 	/**
 	 * 各エラーコードに対応するメッセージ
 	 */
 	var errMsgMap = {};
 	errMsgMap[ERR_CODE_NO_COMPARE_FUNCTIONS] = '演算子"{0}"で"{1}"型の値を比較することはできません';
-	errMsgMap[ERR_CODE_ORDER_BY_KEY] = 'ORDER BY句の指定が不正です。指定されたキー({0})は存在しません';
-	errMsgMap[ERR_CODE_ORDER_BY_CLAUSE] = 'ORDER BY句の指定が不正です。指定されたorder句:{0} "key名 ASC"または"key名 DESC"またはソート関数を指定してください';
+	errMsgMap[ERR_CODE_ORDER_BY_KEY] = '{0}の第1引数が不正です。指定されたキー({1})はモデル{2}に存在しません';
+	errMsgMap[ERR_CODE_ORDER_BY_COMPARE_FUNCTION_INVALID] = 'setOrderFunctionの第1引数が不正です。比較関数を関数で指定してください';
+	errMsgMap[ERR_CODE_ALREADY_SET_ORDER_FUNCTION] = 'setOrderFunction()ですでにソート条件が設定済みです。addOrder()でソート条件を追加することはできません。';
+	errMsgMap[ERR_CODE_ALREADY_ADDED_ORDER] = 'addOrder()ですでにソート条件が追加済みです。setOrderFunction()でソート条件を設定することはできません。';
+
 	// メッセージの登録
 	addFwErrorCodeMap(errMsgMap);
 
@@ -11116,51 +11564,39 @@ var h5internal = {
 	}
 
 	/**
-	 * 指定されたキーでアイテムを昇順にソートするための比較関数を作成します
+	 * QueryResultクラス
+	 * <p>
+	 * {@link Query.execute}がこのクラスのインスタンスを返します
+	 * </p>
+	 * <p>
+	 * {@link QueryResult.result}プロパティにクエリ結果が格納されています
+	 * </p>
 	 *
-	 * @private
-	 * @param {String} key データアイテムのキー名
-	 * @returns {Function}
+	 * @class
+	 * @name QueryResult
 	 */
-	function createAscCompareFunction(key) {
-		return function(item1, item2) {
-			var val1 = item1.get(key);
-			var val2 = item2.get(key);
-			if (val1 > val2) {
-				return 1;
-			}
-			if (val1 < val2) {
-				return -1;
-			}
-			return 0;
-		};
-	}
-
 	/**
-	 * 指定されたキーでアイテムを降順にソートするための比較関数を作成します
-	 *
 	 * @private
-	 * @param {String} key データアイテムのキー名
-	 * @returns {Function}
+	 * @param {DataItem[]} result
 	 */
-	function createDescCompareFunction(key) {
-		return function(item1, item2) {
-			var val1 = item1.get(key);
-			var val2 = item2.get(key);
-			if (val1 > val2) {
-				return -1;
-			}
-			if (val1 < val2) {
-				return 1;
-			}
-			return 0;
-		};
+	function QueryResult(result) {
+		/**
+		 * クエリ結果配列
+		 * <p>
+		 * {@link Query.execute}によって選択された{@link DataItem}が格納された配列です。
+		 * </p>
+		 *
+		 * @memberOf QueryResult
+		 * @name result
+		 * @type {DataItem[]}
+		 */
+		this.result = result;
 	}
 
 	/**
 	 * Queryクラス
 	 * <p>
-	 * {@link DataModel#createQuery}の戻り値がこのクラスのインスタンスです。
+	 * {@link DataModel.createQuery}の戻り値がこのクラスのインスタンスです。
 	 * </p>
 	 *
 	 * @class
@@ -11172,18 +11608,6 @@ var h5internal = {
 	 */
 	function Query(model) {
 		/**
-		 * 検索結果の配列(ObservableArray)
-		 * <p>
-		 * 検索結果配列は中身は変わってもインスタンスは変わりません。
-		 * </p>
-		 *
-		 * @name result
-		 * @memberOf Query
-		 * @type {ObservableArray}
-		 */
-		this.result = h5.core.data.createObservableArray();
-
-		/**
 		 * 検索対象のデータモデル
 		 *
 		 * @private
@@ -11192,16 +11616,6 @@ var h5internal = {
 		 * @type {DataModel}
 		 */
 		this._model = model;
-
-		/**
-		 * ライブクエリかどうか。デフォルトfalse
-		 *
-		 * @private
-		 * @name _isLive
-		 * @memberOf Query
-		 * @type {Boolean}
-		 */
-		this._isLive = false;
 	}
 	// TODO 今は何もイベントをあげていないのでeventDispatcherにする必要がない。仕様が決まったら対応する。
 	//	h5.mixin.eventDispatcher.mix(Query.prototype);
@@ -11210,7 +11624,7 @@ var h5internal = {
 		/**
 		 * 検索条件オブジェクトをセットします
 		 * <p>
-		 * 検索の実行({@link Query#execute})を実行した時に、ここで指定した検索条件オブジェクトに基づいて検索を実行します。
+		 * 検索の実行({@link Query.execute})を実行した時に、ここで指定した検索条件オブジェクトに基づいて検索を実行します。
 		 * </p>
 		 * <p>
 		 * 検索条件オブジェクトは、"プロパティ名 (演算子)"をキーにして、比較する値を値に持つオブジェクトを指定します。
@@ -11232,7 +11646,6 @@ var h5internal = {
 		 * 	name: /HTML5/,
 		 * 	'price &lt;': 3000
 		 * }
-		 *
 		 * // categoryが'game'または'movie'で、releaseDateが2014年以降のアイテムを検索する条件
 		 * {
 		 *   'category in': ['game', 'movie'],
@@ -11246,31 +11659,25 @@ var h5internal = {
 		 */
 		setCriteria: function(criteria) {
 			this._criteria = compileCriteria(criteria);
-			if (this._isLive) {
-				// ライブクエリならセット時に検索
-				this.execute();
-			}
 			return this;
 		},
 
 		/**
 		 * 検索を実行
 		 * <p>
-		 * {@link Query#setCriteria}で設定した検索条件で検索します。検索が完了すると{@link result}に結果が格納されます。
+		 * {@link Query.setCriteria}で設定した検索条件で検索し、結果を{@link QueryResult}で返します。
 		 * </p>
 		 * <p>
-		 * また、{@link Query#onQueryComplete}に設定したハンドラが呼ばれます。
+		 * また、{@link Query.onQueryComplete}に設定したハンドラが呼ばれます。
 		 * </p>
 		 *
 		 * @memberOf Query
-		 * @returns {Query}
+		 * @returns {QueryResult}
 		 */
 		execute: function() {
 			// 新しくdeferredを作成
 			this._executeDfd = h5.async.deferred();
-			var result = this.result;
-			// resultを一旦空にする
-			result.copyFrom(null);
+			var result = [];
 			for ( var id in this._model.items) {
 				var item = this._model.items[id];
 				// マッチするなら結果に追加
@@ -11279,11 +11686,32 @@ var h5internal = {
 				}
 			}
 			// ソート
-			if (this._compareFunction) {
-				result.sort(this._compareFunction);
+			if (this._orderFunction) {
+				result.sort(this._orderFunction);
+			} else if (this._addedOrders) {
+				var addedOrders = this._addedOrders;
+				var keysLength = addedOrders.length;
+				result.sort(function(item1, item2) {
+					// 追加されたキー順に評価する
+					// p1,p2が2つとも昇順で登録されている場合、p1で昇順ソートになっていて、p1が同じものについてはp2で昇順ソートされるようにする
+					for (var i = 0; i < keysLength; i++) {
+						var order = addedOrders[i];
+						var key = order.key;
+						var isAsc = order.isAsc;
+						var val1 = item1.get(key);
+						var val2 = item2.get(key);
+						if (val1 > val2) {
+							return isAsc ? 1 : -1;
+						}
+						if (val1 < val2) {
+							return isAsc ? -1 : 1;
+						}
+					}
+					return 0;
+				});
 			}
 			this._executeDfd.resolveWith(this, [result]);
-			return this;
+			return new QueryResult(result);
 		},
 
 		/**
@@ -11302,104 +11730,155 @@ var h5internal = {
 			return this;
 		},
 
+		// TODO Liveクエリの仕様は再検討する
+		//		/**
+		//		 * クエリをライブクエリにします
+		//		 * <p>
+		//		 * ライブクエリにすると、検索条件がセットされた時やDataModelに変更があった時に検索結果が動的に変更されます。(executeを呼ぶ必要がありません)
+		//		 * </p>
+		//		 *
+		//		 * @see Query#unsetLive
+		//		 * @memberOf Query
+		//		 * @returns {Query}
+		//		 */
+		//		setLive: function() {
+		//			// ライブクエリ設定済みなら何もしない
+		//			if (this._isLive) {
+		//				return;
+		//			}
+		//			// リスナ未作成なら作成
+		//			this._listener = this._listener || createChangeListener(this);
+		//			this._model.addEventListener('itemsChange', this._listener);
+		//			this._isLive = true;
+		//
+		//			return this;
+		//		},
+		//
+		//		/**
+		//		 * ライブクエリを解除します
+		//		 *
+		//		 * @see Query#setLive
+		//		 * @memberOf Query
+		//		 * @returns {Query}
+		//		 */
+		//		unsetLive: function() {
+		//			// ライブクエリでなければ何もしない
+		//			if (!this._isLive) {
+		//				return;
+		//			}
+		//			this._model.removeEventListener('itemsChange', this._listener);
+		//			this._isLive = false;
+		//			return this;
+		//		},
+
 		/**
-		 * クエリをライブクエリにします
+		 * 検索結果のソート条件を比較関数で設定
 		 * <p>
-		 * ライブクエリにすると、検索条件がセットされた時やDataModelに変更があった時に検索結果が動的に変更されます。(executeを呼ぶ必要がありません)
+		 * 検索結果をソートする比較関数を指定します。データアイテム同士を比較する関数を設定してください。
+		 * </p>
+		 * <p>
+		 * 比較関数の例
 		 * </p>
 		 *
-		 * @see Query#unsetLive
-		 * @memberOf Query
-		 * @returns {Query}
-		 */
-		setLive: function() {
-			// ライブクエリ設定済みなら何もしない
-			if (this._isLive) {
-				return;
-			}
-			// リスナ未作成なら作成
-			this._listener = this._listener || createChangeListener(this);
-			this._model.addEventListener('itemsChange', this._listener);
-			this._isLive = true;
-
-			return this;
-		},
-
-		/**
-		 * ライブクエリを解除します
-		 *
-		 * @see Query#setLive
-		 * @memberOf Query
-		 * @returns {Query}
-		 */
-		unsetLive: function() {
-			// ライブクエリでなければ何もしない
-			if (!this._isLive) {
-				return;
-			}
-			this._model.removeEventListener('itemsChange', this._listener);
-			this._isLive = false;
-			return this;
-		},
-
-		/**
-		 * 検索結果のソート条件を設定
-		 * <p>
-		 * 比較関数または文字列で指定します
-		 * </p>
-		 * <p>
-		 * 文字列の場合は、'プロパティ名 ASC|DESC'のようにしてします。指定したプロパティの値でソートし、ASCは昇順、DESCは降順指定、省略すると昇順でソートします。
-		 * </p>
-		 * <p>
-		 * 比較関数を指定する場合、以下の例のように実装してください。
-		 * </p>
-		 *
-		 * <pre class="sh_javascript">
-		 * query.orderBy(function(a, b) {
-		 * 	// idを数値で評価して降順にする
-		 * 		// 引数はそれぞれデータアイテム。第1引数を先にする場合は正の値、第2引数を先にする場合は負の値を返す
+		 * <pre class="sh_javascript"><code>
+		 * query.setOrderFunction(function(a, b) {
+		 * 	// 比較関数の引数はそれぞれデータアイテム。第1引数を先にする場合は正の値、第2引数を先にする場合は負の値を返す
 		 * 		return parseInt(b.get('id')) - parseInt(a.get('id'));
 		 * 	});
-		 * </pre>
+		 * </code></pre>
+		 *
+		 * <p>
+		 * 単にあるプロパティで昇順あるいは降順にソートしたい場合は{@link Query.addOrder}で設定できます。
+		 * </p>
+		 * <p>
+		 * {@link Query.addOrder}で条件を追加している場合にsetOrderFunctionで比較関数を設定することはできません。また逆に、setOrderFunctionで比較関数を設定している場合はaddOrderは呼べません。
+		 * </p>
+		 * <p>
+		 * setOrderFunction()で比較設定を設定済みである場合に再度setOrderFunction()を実行すると、設定済みの関数は上書きされます。
+		 * </p>
+		 * <p>
+		 * setOrderFunction()で設定したソート条件を削除したい場合は{@link Query.clearOrder}を実行してください。
+		 * </p>
 		 *
 		 * @memberOf Query
-		 * @param {String|Function}
+		 * @param {Function} orderFunction
 		 * @returns {Query}
 		 */
-		orderBy: function(orderByClause) {
-			// compareFuncの作成
-			if (isFunction(orderByClause)) {
-				this._compareFunction = orderByClause;
-				this.result.sort(this._compareFunction);
-				return this;
+		setOrderFunction: function(orderFunction) {
+			// 比較関数のエラーチェック
+			if (!isFunction(orderFunction)) {
+				throwFwError(ERR_CODE_ORDER_BY_COMPARE_FUNCTION_INVALID);
 			}
-			if (!orderByClause || !isString(orderByClause)) {
-				// エラー
-				throwFwError(ERR_CODE_ORDER_BY_CLAUSE, [orderByClause]);
+			if (this._addedOrders) {
+				// addOrderですでにオーダーキーが設定済みの場合はsetOrderFunctionできない
+				throwFwError(ERR_CODE_ALREADY_ADDED_ORDER);
 			}
-			var tmp = orderByClause.split(' ');
-			var key = $.trim(tmp[0]);
+			this._orderFunction = orderFunction;
+			return this;
+		},
 
+		/**
+		 * 検索結果のソート条件を指定したプロパティついての昇順、または降順に設定
+		 * <p>
+		 * 検索結果のソート条件を指定したプロパティについての昇順、または降順に設定します。第1引数には比較対象となるキー名を指定してください。
+		 * </p>
+		 * <p>
+		 * 第2引数にfalseを指定した場合は降順です。trueを指定した場合は省略した場合は昇順です。
+		 * </p>
+		 * <p>
+		 * addOrderは複数回呼ぶことで条件を追加できます。
+		 * </p>
+		 *
+		 * <pre class="sh_javascript"><code>
+		 * query.addOrder('p1').addOrder('p2', false);
+		 * </code></pre>
+		 *
+		 * <p>
+		 * 上記のように指定した場合、p1キーで昇順ソートし、p1の値が同じアイテムについてはp2キーで降順ソートします。
+		 * </p>
+		 * <p>
+		 * {@link Query.setOrderFunction}で比較関数を設定している場合はこのメソッドは呼べません。また逆に、addOrder()で条件を追加している場合にsetOrderFunctionで比較関数を設定することもできません。
+		 * </p>
+		 * <p>
+		 * addOrder()で追加した条件をすべて削除したい場合は{@link Query.clearOrder}を実行してください。
+		 * </p>
+		 *
+		 * @memberOf Query
+		 * @param {string} key
+		 * @param {boolean} [isAsc=true] falseを指定すると降順に設定。デフォルトは昇順
+		 * @returns {Query}
+		 */
+		addOrder: function(key, isAsc) {
 			// keyがschemaにあるかどうかチェックする
 			var schema = this._model.schema;
 			if (!schema.hasOwnProperty(key)) {
-				//スキーマに存在しないプロパティはgetできない（プログラムのミスがすぐわかるように例外を送出）
-				throwFwError(ERR_CODE_ORDER_BY_KEY, [this._model.name, key]);
+				// スキーマに存在しないプロパティはgetできない（プログラムのミスがすぐわかるように例外を送出）
+				throwFwError(ERR_CODE_ORDER_BY_KEY, ['addOrder', key, this._model.name]);
 			}
+			if (this._orderFunction) {
+				// setOrderFunctionですでにオーダー関数が設定済みの場合はaddOrderできない
+				throwFwError(ERR_CODE_ALREADY_SET_ORDER_FUNCTION);
+			}
+			this._addedOrders = this._addedOrders || [];
+			this._addedOrders.push({
+				key: key,
+				isAsc: isAsc !== false
+			});
+			return this;
+		},
 
-			var order = tmp[1] ? $.trim(tmp[1].toUpperCase()) : 'ASC';
-			if (order === 'DESC') {
-				this._compareFunction = createDescCompareFunction(key);
-			} else if (order === 'ASC') {
-				this._compareFunction = createAscCompareFunction(key);
-			} else {
-				// エラー
-				throwFwError(ERR_CODE_ORDER_BY_CLAUSE, [orderByClause]);
-			}
-			// ライブクエリならソートする
-			if (this._isLive) {
-				this.result.sort(this._compareFunction);
-			}
+		/**
+		 * 検索結果のソート条件指定を全て削除
+		 * <p>
+		 * {@link Query.addOrder}及び{@link Query.setOrderFunction}で設定したソート条件をすべて削除します。
+		 * </p>
+		 *
+		 * @memberOf Query
+		 * @returns {Query}
+		 */
+		clearOrder: function() {
+			this._addedOrders = null;
+			this._orderFunction = null;
 			return this;
 		}
 	});
@@ -13480,6 +13959,9 @@ var h5internal = {
 	 * <p>
 	 * thisはデータモデルマネージャから呼ばれた場合はそのデータモデルマネージャ。
 	 * </p>
+	 *
+	 * @param {Object|Object[]} descriptor ディスクリプタまたはディスクリプタの配列
+	 * @returns {DataModel|DataModel[]}
 	 */
 	function createModel(descriptor) {
 		// descriptorがオブジェクトまたは配列じゃなかったらエラー
@@ -13740,7 +14222,7 @@ var h5internal = {
 	 * DataItem、ObservableItemのが持つObservableArrayのプロパティに対して、リスナを登録します
 	 *
 	 * @private
-	 * @param {DataItem||ObservableItem} item
+	 * @param {DataItem|ObservableItem} item
 	 * @param {String} propName プロパティ名
 	 * @param {ObservableArray} リスナ登録をするObservableArray
 	 * @param {DataModel} [model] モデル(DataItemの場合)
@@ -13911,7 +14393,7 @@ var h5internal = {
 		/**
 		 * このデータモデルマネージャが管理するDataModelインスタンス。
 		 * <p>
-		 * <a href="#createModel">createmodel()</a>で作成したモデルは、データモデルマネージャの管理下に置かれ、modelsから参照できます。
+		 * <a href="#createModel">createModel()</a>で作成したモデルは、データモデルマネージャの管理下に置かれ、modelsから参照できます。
 		 * </p>
 		 * <p>
 		 * {モデル名: データモデルインスタンス, ...} の構造を持つオブジェクトです。
@@ -13978,12 +14460,14 @@ var h5internal = {
 		 * </p>
 		 *
 		 * @since 1.1.0
-		 * @param {Object} descriptor データモデルディスクリプタ
+		 * @function
+		 * @param {Object|Object[]} descriptor データモデルディスクリプタまたはその配列
 		 * @param {String} descriptor.name データモデル名。必須。
 		 * @param {String} descriptor.base
 		 *            マネージャに属する別のデータモデルのschemaを継承する場合に指定します。『'@'+継承先データモデル名』で指定してください。
 		 * @param {Object} descriptor.schema スキーマを定義したオブジェクトを指定します。必須。
 		 * @memberOf DataModelManager
+		 * @returns {DataModel|DataModel[]} データモデルを返します。ディスクリプタが配列で渡された場合はそれぞれについてのデータモデルを配列で返します。
 		 */
 		createModel: createModel,
 
@@ -14059,7 +14543,6 @@ var h5internal = {
 		 * </pre>
 		 *
 		 * @since 1.1.0
-		 * @returns {Boolean} アップデートセッション中かどうか
 		 * @memberOf DataModelManager
 		 */
 		beginUpdate: function() {
@@ -14348,6 +14831,7 @@ var h5internal = {
 	 * @param {Number} [start=1] 開始番号
 	 * @param {Number} [step=1] ステップ数
 	 * @param {Integer} [returnType=2] 戻り値の型(デフォルト number)
+	 * @returns {Sequence}
 	 */
 	function createSequence(start, step, returnType) {
 		// start,stepをdefault値で、returnTypeだけ指定したい場合、createSequence(null,null,returnType)で呼べるように、==nullで比較している
@@ -15404,6 +15888,626 @@ var h5internal = {
 		createSequence: createSequence,
 		SEQ_STRING: SEQ_STRING,
 		SEQ_INT: SEQ_INT
+	});
+})();
+/* ------ h5.core.view ------ */
+(function() {
+	// =========================================================================
+	//
+	// Constants
+	//
+	// =========================================================================
+
+	// =============================
+	// Production
+	// =============================
+
+	/**
+	 * EJSにスクリプトレットの区切りとして認識させる文字
+	 */
+	var DELIMITER = '[';
+
+	// エラーコード
+	/**
+	 * コンパイルしようとしたテンプレートが文字列でない
+	 */
+	var ERR_CODE_TEMPLATE_COMPILE_NOT_STRING = 7000;
+
+	/**
+	 * テンプレートIDが不正である時に発生するエラー
+	 */
+	var ERR_CODE_TEMPLATE_INVALID_ID = 7002;
+
+	/**
+	 * load()呼び出し時に引数にファイル名またはファイル名の配列が渡されなかった時に発生するエラー
+	 */
+	var ERR_CODE_INVALID_FILE_PATH = 7004;
+
+	/**
+	 * 登録されていないテンプレートIDを指定したときに発生するエラー
+	 */
+	var ERR_CODE_TEMPLATE_ID_UNAVAILABLE = 7005;
+
+	/**
+	 * テンプレートに渡すパラメータに必要なプロパティが設定されていない時に発生するエラー
+	 */
+	var ERR_CODE_TEMPLATE_PROPATY_UNDEFINED = 7006;
+
+	/**
+	 * bindに指定されたターゲットが不正(非DOM要素またはセレクタで指定された要素が存在しない)な場合に発生するエラー
+	 */
+	var ERR_CODE_BIND_INVALID_TARGET = 7007;
+
+	/**
+	 * bindに指定したtargetが表すDOM要素が複数あるならエラー
+	 */
+	var ERR_CODE_TOO_MANY_TARGETS = 7008;
+
+	/**
+	 * bindに指定したcontextがオブジェクトでない
+	 */
+	var ERR_CODE_BIND_CONTEXT_INVALID = 7009;
+
+	/**
+	 * テンプレートのコンパイルエラー
+	 */
+	var ERR_CODE_TEMPLATE_COMPILE_SYNTAX_ERR = 7010;
+
+	// =============================
+	// Development Only
+	// =============================
+
+	var fwLogger = h5.log.createLogger('h5.core.view');
+
+	/* del begin */
+	var FW_LOG_TEMPLATE_NOT_REGISTERED = '指定されたIDのテンプレートは登録されていません。"{0}"';
+	var FW_LOG_TEMPLATE_OVERWRITE = 'テンプレートID:{0} は上書きされました。';
+
+	/**
+	 * 各エラーコードに対応するメッセージ
+	 */
+	var errMsgMap = {};
+	errMsgMap[ERR_CODE_TEMPLATE_COMPILE_NOT_STRING] = 'テンプレートのコンパイルでエラーが発生しました。テンプレートには文字列を指定してください。';
+	// ERR_CODE_INVALID_IDのエラーのメッセージはh5.resで登録済みなのでここで再度登録はしない
+	// (ejsファイル解析時のid不正と、get()の引数のid不正が同じエラーであるため、res,viewで両方使用している)
+	//	errMsgMap[ERR_CODE_TEMPLATE_INVALID_ID] = 'テンプレートIDが指定されていません。空や空白でない文字列で指定してください。';
+	errMsgMap[ERR_CODE_INVALID_FILE_PATH] = 'テンプレートファイルの指定が不正です。空や空白でない文字列、または文字列の配列で指定してください。';
+	errMsgMap[ERR_CODE_TEMPLATE_ID_UNAVAILABLE] = 'テンプレートID:{0} テンプレートがありません。';
+	errMsgMap[ERR_CODE_TEMPLATE_PROPATY_UNDEFINED] = '{0} テンプレートにパラメータが設定されていません。';
+	errMsgMap[ERR_CODE_BIND_INVALID_TARGET] = 'bindの引数に指定されたターゲットが存在しないかまたは不正です。';
+	errMsgMap[ERR_CODE_TOO_MANY_TARGETS] = 'bindの引数に指定されたバインド先の要素が2つ以上存在します。バインド対象は1つのみにしてください。';
+	errMsgMap[ERR_CODE_BIND_CONTEXT_INVALID] = 'bindの引数に指定されたルートコンテキストが不正です。オブジェクト、データアイテム、またはObservableItemを指定してください。';
+	errMsgMap[ERR_CODE_TEMPLATE_COMPILE_SYNTAX_ERR] = 'テンプレートのコンパイルでエラーが発生しました。構文エラー：{0} {1}';
+
+	// メッセージの登録
+	addFwErrorCodeMap(errMsgMap);
+	/* del end */
+
+	// =========================================================================
+	//
+	// Cache
+	//
+	// =========================================================================
+	var getDeferred = h5.async.deferred;
+
+	// =========================================================================
+	//
+	// Privates
+	//
+	// =========================================================================
+
+	// =============================
+	// Variables
+	// =============================
+
+	/**
+	 * EJSテンプレート内で使用可能なヘルパー関数を格納するオブジェクト
+	 */
+	var helperExtras = {
+
+		/**
+		 * HTML文字列をエスケープします。
+		 *
+		 * @param {String} str エスケープ対象文字列
+		 * @returns {String} エスケープされた文字列
+		 */
+		escapeHtml: function(str) {
+			return h5.u.str.escapeHtml(str);
+		}
+	};
+
+	// =============================
+	// Functions
+	// =============================
+
+	/**
+	 * jQueryオブジェクトか判定し、jQueryオブジェクトならそのまま、そうでないならjQueryオブジェクトに変換して返します。
+	 *
+	 * @function
+	 * @param {Object} obj DOM要素
+	 * @returns {Object} jQueryObject
+	 */
+	function getJQueryObj(obj) {
+		return h5.u.obj.isJQueryObject(obj) ? obj : $(obj);
+	}
+
+	// =========================================================================
+	//
+	// Body
+	//
+	// =========================================================================
+
+	/**
+	 * テンプレートを扱うクラス
+	 * <p>
+	 * <a href="h5.core.view.html">h5.core.view</a>がこのクラスを実装しています。また、<a
+	 * href="h5.core.view.html#createView">h5.core.view.createView()</a>でこのクラスのインスタンスを生成できます。
+	 * </p>
+	 * <p>
+	 * また、コントローラは内部にController.viewインスタンスを持ち、コントローラ内であればthis.viewで参照することができます。
+	 * </p>
+	 * <p>
+	 * コントローラの持つViewについての詳細は、<a href="Controller.view.html">Controller.view</a>を参照してください。
+	 * </p>
+	 *
+	 * @class
+	 * @name View
+	 */
+	function View() {
+		/**
+		 * キャッシュしたテンプレートを保持するオブジェクト
+		 *
+		 * @private
+		 * @name __cachedTemplates
+		 * @memberOf View
+		 */
+		this.__cachedTemplates = {};
+	}
+
+	$.extend(View.prototype, {
+		/**
+		 * 指定されたパスのテンプレートファイルを非同期で読み込みキャッシュします。<br>
+		 * このメソッドでは、通信エラー発生時に自動リトライは行いません（ver.1.1.4現在。将来この動作は変更される可能性があります）。
+		 *
+		 * @memberOf View
+		 * @name load
+		 * @function
+		 * @param {String|String[]} resourcePaths テンプレートファイル(.ejs)のパス (配列で複数指定可能)
+		 * @returns {Promise} promiseオブジェクト
+		 */
+		load: function(resourcePaths) {
+			var dfd = getDeferred();
+			var paths = null;
+
+			// resourcePathsが文字列か配列でなかったらエラーを投げます。
+			switch ($.type(resourcePaths)) {
+			case 'string':
+				if (!$.trim(resourcePaths)) {
+					throwFwError(ERR_CODE_INVALID_FILE_PATH);
+				}
+				paths = [resourcePaths];
+				break;
+			case 'array':
+				paths = resourcePaths;
+				if (paths.length === 0) {
+					throwFwError(ERR_CODE_INVALID_FILE_PATH);
+				}
+				for (var i = 0, len = paths.length; i < len; i++) {
+					if (!isString(paths[i])) {
+						throwFwError(ERR_CODE_INVALID_FILE_PATH);
+					} else if (!$.trim(paths[i])) {
+						throwFwError(ERR_CODE_INVALID_FILE_PATH);
+					}
+				}
+				break;
+			default:
+				throwFwError(ERR_CODE_INVALID_FILE_PATH);
+			}
+
+			var promises = [];
+			for (var i = 0, l = paths.length; i < l; i++) {
+				promises.push(h5.res.get(paths[i]));
+			}
+			var view = this;
+			waitForPromises(promises, function(resources) {
+				// viewにテンプレートを登録
+				resources = isArray(resources) ? resources : [resources];
+				// 先に全てのテンプレートが登録できるかどうかをチェック
+				// チェックしながら登録するテンプレートを列挙する
+				var validTemplates = [];
+				var invalidTemplate;
+				for (var i = 0, l = resources.length; i < l; i++) {
+					var templates = resources[i].templates;
+					for (var j = 0, len = templates.length; j < len; j++) {
+						if (!view.isValid(templates[j].content)) {
+							invalidTemplate = templates[j];
+							break;
+						}
+						validTemplates.push(templates[j]);
+					}
+					if (invalidTemplate) {
+						break;
+					}
+				}
+				if (invalidTemplate) {
+					try {
+						// invalidなテンプレートがあったらエラーオブジェクトを取得してreject
+						view.register(invalidTemplate.id, invalidTemplate.content);
+					} catch (e) {
+						// 登録でエラーが発生したらrejectする
+						// detailにエラーが発生した時のリソースのurlとpathを追加する
+						e.detail.url = resources[i].url;
+						e.detail.path = resources[i].path;
+						return dfd.reject(e);
+					}
+				}
+
+				// 全てvalidならすべてのテンプレートを登録
+				for (var i = 0, l = validTemplates.length; i < l; i++) {
+					view.register(validTemplates[i].id, validTemplates[i].content);
+				}
+				// TODO doneハンドラに渡す引数を作成
+				dfd.resolve();
+			}, function(e) {
+				fwLogger.error(e.message);
+				dfd.reject(e);
+			});
+			return dfd.promise();
+		},
+
+		/**
+		 * Viewインスタンスに登録されている、利用可能なテンプレートのIDの配列を返します。
+		 *
+		 * @memberOf View
+		 * @name getAvailableTemplates
+		 * @function
+		 * @returns {String[]} テンプレートIDの配列
+		 */
+		getAvailableTemplates: function() {
+			var ids = [];
+			for ( var id in this.__cachedTemplates) {
+				ids.push(id);
+			}
+			return ids;
+		},
+		/**
+		 * Viewインスタンスに、指定されたIDとテンプレート文字列からテンプレートを1件登録します。
+		 * <p>
+		 * 指定されたIDのテンプレートがすでに存在する場合は上書きします。 templateStringが不正な場合はエラーを投げます。
+		 * </p>
+		 *
+		 * @memberOf View
+		 * @name register
+		 * @function
+		 * @param {String} templateId テンプレートID
+		 * @param {String} templateString テンプレート文字列
+		 */
+		register: function(templateId, templateString) {
+			if ($.type(templateString) !== 'string') {
+				throwFwError(ERR_CODE_TEMPLATE_COMPILE_NOT_STRING, null, {
+					id: templateId
+				});
+			} else if (!isString(templateId) || !$.trim(templateId)) {
+				throwFwError(ERR_CODE_TEMPLATE_INVALID_ID, []);
+			}
+			/* del begin */
+			if (this.__cachedTemplates[templateId]) {
+				fwLogger.info(FW_LOG_TEMPLATE_OVERWRITE, templateId);
+			}
+			/* del end */
+			try {
+				var compiledTemplate = new EJS.Compiler(templateString, DELIMITER);
+				compiledTemplate.compile();
+				this.__cachedTemplates[templateId] = compiledTemplate.process;
+			} catch (e) {
+				var lineNo = e.lineNumber;
+				var msg = lineNo ? ' line:' + lineNo : '';
+				throwFwError(ERR_CODE_TEMPLATE_COMPILE_SYNTAX_ERR, [msg, e.message], {
+					id: templateId
+				});
+			}
+		},
+
+		/**
+		 * テンプレート文字列が、コンパイルできるかどうかを返します。
+		 *
+		 * @memberOf View
+		 * @name isValid
+		 * @function
+		 * @returns {Boolean} 第一引数に渡されたテンプレート文字列がコンパイル可能かどうか。
+		 */
+		isValid: function(templateString) {
+			try {
+				var compiledTemplate = new EJS.Compiler(templateString, DELIMITER);
+				compiledTemplate.compile();
+				return true;
+			} catch (e) {
+				return false;
+			}
+		},
+
+		/**
+		 * パラメータで置換された、指定されたテンプレートIDのテンプレートを取得します。
+		 * <p>
+		 * 取得するテンプレート内に置換要素([%= %])が存在する場合、パラメータを全て指定してください。
+		 * </p>
+		 * <p>
+		 * templateIdがこのViewインスタンスで利用可能でなければエラーを投げます。
+		 * </p>
+		 * <p> ※ ただし、コントローラが持つviewインスタンスから呼ばれた場合、templateIdが利用可能でない場合は再帰的に親コントローラをたどり、
+		 * 親コントローラが持つViewインスタンスで利用可能かどうか確認します。 利用可能であれば、そのインスタンスのview.get()を実行します。
+		 * </p>
+		 * <p>
+		 * 一番上の親のViewインスタンスまで辿ってもtemplateId利用可能でなければ場合はh5.core.view.get()を実行します。
+		 * h5.core.viewでtemplateIdが利用可能でなければエラーを投げます。
+		 * </p>
+		 * <p>
+		 * <a href="#update">update()</a>, <a href="#append">append()</a>, <a
+		 * href="#prepend">prepend()</a>についても同様です。
+		 * </p>
+		 *
+		 * @memberOf View
+		 * @name get
+		 * @function
+		 * @param {String} templateId テンプレートID
+		 * @param {Object} [param] パラメータ(オブジェクトリテラルで指定)
+		 * @returns {String} テンプレート文字列
+		 */
+		get: function(templateId, param) {
+			var cache = this.__cachedTemplates;
+
+			if (!isString(templateId) || !$.trim(templateId)) {
+				throwFwError(ERR_CODE_TEMPLATE_INVALID_ID);
+			}
+
+			var template = cache[templateId];
+
+			if (!template) {
+				throwFwError(ERR_CODE_TEMPLATE_ID_UNAVAILABLE, templateId);
+			}
+
+			var p = (param) ? $.extend(true, {}, param) : {};
+			var helper = p.hasOwnProperty('_h') ? new EJS.Helpers(p) : new EJS.Helpers(p, {
+				_h: helperExtras
+			});
+			var ret = null;
+
+			try {
+				ret = template.call(p, p, helper);
+			} catch (e) {
+				throwFwError(ERR_CODE_TEMPLATE_PROPATY_UNDEFINED, e.toString(), e);
+			}
+
+			return ret;
+		},
+
+		/**
+		 * 要素を指定されたIDのテンプレートで書き換えます。
+		 * <p>
+		 * templateIdがこのViewインスタンスで利用可能でなければエラーを投げますが、
+		 * コントローラが持つviewインスタンスから呼ばれた場合は親コントローラのviewを再帰的にたどります。詳細は<a href="#get">get()</a>をご覧ください。
+		 * </p>
+		 *
+		 * @memberOf View
+		 * @name update
+		 * @function
+		 * @param {String|Element|jQuery} element DOM要素(セレクタ文字列, DOM要素, jQueryオブジェクト)
+		 * @param {String} templateId テンプレートID
+		 * @param {Object} [param] パラメータ
+		 * @returns {jQuery} テンプレートが適用されたDOM要素(jQueryオブジェクト)
+		 */
+		update: function(element, templateId, param) {
+			return getJQueryObj(element).html(this.get(templateId, param));
+		},
+
+		/**
+		 * 要素の末尾に指定されたIDのテンプレートを挿入します。
+		 * <p>
+		 * templateIdがこのViewインスタンスで利用可能でなければエラーを投げますが、
+		 * コントローラが持つviewインスタンスから呼ばれた場合は親コントローラのviewを再帰的にたどります。詳細は<a href="#get">get()</a>をご覧ください。
+		 * </p>
+		 *
+		 * @memberOf View
+		 * @name append
+		 * @function
+		 * @param {Element|jQuery} element DOM要素(セレクタ文字列, DOM要素, jQueryオブジェクト)
+		 * @param {String} templateId テンプレートID
+		 * @param {Object} [param] パラメータ
+		 * @returns {jQuery} テンプレートが適用されたDOM要素(jQueryオブジェクト)
+		 */
+		append: function(element, templateId, param) {
+			return getJQueryObj(element).append(this.get(templateId, param));
+		},
+
+		/**
+		 * 要素の先頭に指定されたIDのテンプレートを挿入します。
+		 * <p>
+		 * templateIdがこのViewインスタンスで利用可能でなければエラーを投げますが、
+		 * コントローラが持つviewインスタンスから呼ばれた場合は親コントローラのviewを再帰的にたどります。詳細は<a href="#get">get()</a>をご覧ください。
+		 * </p>
+		 *
+		 * @memberOf View
+		 * @name prepend
+		 * @function
+		 * @param {String|Element|jQuery} element DOM要素(セレクタ文字列, DOM要素, jQueryオブジェクト)
+		 * @param {String} templateId テンプレートID
+		 * @param {Object} [param] パラメータ
+		 * @returns {jQuery} テンプレートが適用されたDOM要素(jQueryオブジェクト)
+		 */
+		prepend: function(element, templateId, param) {
+			return getJQueryObj(element).prepend(this.get(templateId, param));
+		},
+
+		/**
+		 * 指定されたテンプレートIDのテンプレートが存在するか判定します。
+		 *
+		 * @memberOf View
+		 * @name isAvailable
+		 * @function
+		 * @param {String} templateId テンプレートID
+		 * @returns {Boolean} 判定結果(存在する: true / 存在しない: false)
+		 */
+		isAvailable: function(templateId) {
+			return !!this.__cachedTemplates[templateId];
+		},
+
+		/**
+		 * 引数に指定されたテンプレートIDをもつテンプレートをキャッシュから削除します。 引数を指定しない場合はキャッシュされている全てのテンプレートを削除します。
+		 *
+		 * @memberOf View
+		 * @name clear
+		 * @param {String|String[]} templateIds テンプレートID
+		 * @function
+		 */
+		clear: function(templateIds) {
+			if (typeof templateIds === TYPE_OF_UNDEFINED) {
+				this.__cachedTemplates = {};
+				return;
+			}
+
+			var templateIdsArray = null;
+			switch ($.type(templateIds)) {
+			case 'string':
+				templateIdsArray = [templateIds];
+				break;
+			case 'array':
+				if (!templateIds.length) {
+					throwFwError(ERR_CODE_TEMPLATE_INVALID_ID);
+				}
+				templateIdsArray = templateIds;
+				break;
+			default:
+				throwFwError(ERR_CODE_TEMPLATE_INVALID_ID);
+			}
+
+			for (var i = 0, len = templateIdsArray.length; i < len; i++) {
+				var id = templateIdsArray[i];
+				if (!isString(id) || !$.trim(id)) {
+					throwFwError(ERR_CODE_TEMPLATE_INVALID_ID);
+				}
+				/* del begin */
+				if (!this.__cachedTemplates[id]) {
+					fwLogger.warn(FW_LOG_TEMPLATE_NOT_REGISTERED, id);
+				}
+				/* del end */
+			}
+
+			for (var i = 0, len = templateIdsArray.length; i < len; i++) {
+				delete this.__cachedTemplates[templateIdsArray[i]];
+			}
+		},
+
+		/**
+		 * データバインドを開始します。
+		 * <p>
+		 * 注意:<br>
+		 * このメソッドではバインド対象にコメントビューを指定できません。<br>
+		 * コメントビューを使用したデータバインドは、コントローラが持つViewインスタンス(<a href="Controller.html#view">Controller.view</a>)から実行して下さい。
+		 *
+		 * @since 1.1.0
+		 * @param {String|Element|Element[]|jQuery} element コメントビュー疑似セレクタ、またはDOM要素(セレクタ文字列, DOM要素,
+		 *            DOM要素の配列, jQueryオブジェクト)。 DOM要素の配列を指定する場合、全ての要素ノードの親ノードが同じでなければいけません。
+		 * @param {Object} context データコンテキストオブジェクト
+		 * @memberOf View
+		 * @name bind
+		 * @function
+		 * @returns {Binding}
+		 */
+		bind: function(element, context) {
+			var targetNodes = null;
+
+			if (element == null) {
+				throwFwError(ERR_CODE_BIND_INVALID_TARGET);
+			}
+
+			// targetのチェック
+			if (isArray(element)) {
+				//配列はDOMノードの配列であることを仮定
+				targetNodes = element;
+			} else {
+				//targetがDOM、セレクタ文字列の場合をまとめて扱う
+				//インラインテンプレートが指定された場合はコントローラ側のview.bindが予めノード化しているので
+				//ここに到達した時にはノードになっている
+				var $element = $(element);
+
+				if ($element.length === 0) {
+					// 要素がない、もしくは見つからない場合はエラー
+					throwFwError(ERR_CODE_BIND_INVALID_TARGET);
+				}
+
+				//bind()はルートノードが複数であることをサポートするので、lengthは1には限定しない
+				//ただし、これはappend, prepend等の動作を考慮したものである。
+				//つまり、全ての要素は同じノードを親として持っていることを前提としている。
+				//厳密にはチェックすべきだが、実際に問題になることはほとんどないだろうと考え行っていない。
+				targetNodes = $element.toArray();
+			}
+
+			// contextのチェック
+			if (context == null || typeof context !== 'object' || isArray(context)
+					|| h5.core.data.isObservableArray(context)) {
+				throwFwError(ERR_CODE_BIND_CONTEXT_INVALID);
+			}
+
+			return h5internal.view.createBinding(targetNodes, context);
+		}
+	});
+
+	var view = new View();
+
+	/**
+	 * <a href="./View.html">View</a>クラスのインスタンスを生成します。
+	 * <p>
+	 * この関数はh5.core.viewに公開されたViewインスタンスのみが持ちます。この関数で作られたViewインスタンスはcreateView()を持ちません。
+	 * </p>
+	 *
+	 * @name createView
+	 * @memberOf h5.core.view
+	 * @function
+	 */
+	view.createView = function() {
+		return new View();
+	};
+
+	/**
+	 * HTMLに記述されたテンプレートを読み込む
+	 * <p>
+	 * HTMLにあるテンプレートが構文エラーの場合は、例外をそのままスローする。
+	 */
+	$(function() {
+		$('script[type="text/ejs"]').each(function() {
+			var templateId = $.trim(this.id);
+			var templateText = $.trim(this.innerHTML);
+
+			if (templateText.length === 0 || !templateId) {
+				return;
+			}
+
+			var compiledTemplate = new EJS.Compiler(templateText, DELIMITER);
+			compiledTemplate.compile();
+			view.__cachedTemplates[templateId] = compiledTemplate.process;
+		});
+	});
+
+	// =============================
+	// Expose to window
+	// =============================
+
+	/**
+	 * <p>
+	 * グローバルに公開されているViewクラスのインスタンスです。
+	 * </p>
+	 * <p>
+	 * h5.core.viewは、<a href="View.html">View</a>クラスであり、<a href="View.html">View</a>クラスのメソッドを持ちます。<br>
+	 * ただし、h5.core.viewはViewクラスを生成するためのcreateViewメソッドを持ち、生成されたViewクラスはcreateViewメソッドを持ちません。
+	 * </p>
+	 *
+	 * @name view
+	 * @memberOf h5.core
+	 * @see View
+	 * @namespace
+	 */
+	h5.u.obj.expose('h5.core', {
+		view: view
 	});
 })();
 /* h5.core.view_binding */
@@ -16873,7 +17977,7 @@ var h5internal = {
 	};
 
 })();
-/* ------ h5.core.view ------ */
+/* ------ h5.validation ------ */
 (function() {
 	// =========================================================================
 	//
@@ -16884,86 +17988,38 @@ var h5internal = {
 	// =============================
 	// Production
 	// =============================
+	/**
+	 * デフォルトで定義済みのルール名
+	 */
+	var DEFAULT_RULE_NAME_required = 'required';
+	var DEFAULT_RULE_NAME_CUSTOM_FUNC = 'customFunc';
+	var DEFAULT_RULE_NAME_ASSERT_NULL = 'assertNull';
+	var DEFAULT_RULE_NAME_ASSERT_NOT_NULL = 'assertNotNull';
+	var DEFAULT_RULE_NAME_ASSERT_FALSE = 'assertFalse';
+	var DEFAULT_RULE_NAME_ASSERT_TRUE = 'assertTrue';
+	var DEFAULT_RULE_NAME_MAX = 'max';
+	var DEFAULT_RULE_NAME_MIN = 'min';
+	var DEFAULT_RULE_NAME_FUTURE = 'future';
+	var DEFAULT_RULE_NAME_PAST = 'past';
+	var DEFAULT_RULE_NAME_DIGITS = 'digits';
+	var DEFAULT_RULE_NAME_PATTERN = 'pattern';
+	var DEFAULT_RULE_NAME_SIZE = 'size';
 
 	/**
-	 * EJSにスクリプトレットの区切りとして認識させる文字
+	 * ValidationResultのイベント名
 	 */
-	var DELIMITER = '[';
-
-	// エラーコード
-	/**
-	 * コンパイルしようとしたテンプレートが文字列でない
-	 */
-	var ERR_CODE_TEMPLATE_COMPILE_NOT_STRING = 7000;
-
-	/**
-	 * テンプレートIDが不正である時に発生するエラー
-	 */
-	var ERR_CODE_TEMPLATE_INVALID_ID = 7002;
-
-	/**
-	 * load()呼び出し時に引数にファイル名またはファイル名の配列が渡されなかった時に発生するエラー
-	 */
-	var ERR_CODE_INVALID_FILE_PATH = 7004;
-
-	/**
-	 * 登録されていないテンプレートIDを指定したときに発生するエラー
-	 */
-	var ERR_CODE_TEMPLATE_ID_UNAVAILABLE = 7005;
-
-	/**
-	 * テンプレートに渡すパラメータに必要なプロパティが設定されていない時に発生するエラー
-	 */
-	var ERR_CODE_TEMPLATE_PROPATY_UNDEFINED = 7006;
-
-	/**
-	 * bindに指定されたターゲットが不正(非DOM要素またはセレクタで指定された要素が存在しない)な場合に発生するエラー
-	 */
-	var ERR_CODE_BIND_INVALID_TARGET = 7007;
-
-	/**
-	 * bindに指定したtargetが表すDOM要素が複数あるならエラー
-	 */
-	var ERR_CODE_TOO_MANY_TARGETS = 7008;
-
-	/**
-	 * bindに指定したcontextがオブジェクトでない
-	 */
-	var ERR_CODE_BIND_CONTEXT_INVALID = 7009;
-
-	/**
-	 * テンプレートのコンパイルエラー
-	 */
-	var ERR_CODE_TEMPLATE_COMPILE_SYNTAX_ERR = 7010;
+	var EVENT_VALIDATE = 'validate';
+	var EVENT_VALIDATE_COMPLETE = 'validateComplete';
+	var EVENT_VALIDATE_ABORT = 'abort';
 
 	// =============================
 	// Development Only
 	// =============================
-
-	var fwLogger = h5.log.createLogger('h5.core.view');
-
 	/* del begin */
-	var FW_LOG_TEMPLATE_NOT_REGISTERED = '指定されたIDのテンプレートは登録されていません。"{0}"';
-	var FW_LOG_TEMPLATE_OVERWRITE = 'テンプレートID:{0} は上書きされました。';
+	var fwLogger = h5.log.createLogger('h5.core');
 
-	/**
-	 * 各エラーコードに対応するメッセージ
-	 */
-	var errMsgMap = {};
-	errMsgMap[ERR_CODE_TEMPLATE_COMPILE_NOT_STRING] = 'テンプレートのコンパイルでエラーが発生しました。テンプレートには文字列を指定してください。';
-	// ERR_CODE_INVALID_IDのエラーのメッセージはh5.resで登録済みなのでここで再度登録はしない
-	// (ejsファイル解析時のid不正と、get()の引数のid不正が同じエラーであるため、res,viewで両方使用している)
-	//	errMsgMap[ERR_CODE_TEMPLATE_INVALID_ID] = 'テンプレートIDが指定されていません。空や空白でない文字列で指定してください。';
-	errMsgMap[ERR_CODE_INVALID_FILE_PATH] = 'テンプレートファイルの指定が不正です。空や空白でない文字列、または文字列の配列で指定してください。';
-	errMsgMap[ERR_CODE_TEMPLATE_ID_UNAVAILABLE] = 'テンプレートID:{0} テンプレートがありません。';
-	errMsgMap[ERR_CODE_TEMPLATE_PROPATY_UNDEFINED] = '{0} テンプレートにパラメータが設定されていません。';
-	errMsgMap[ERR_CODE_BIND_INVALID_TARGET] = 'bindの引数に指定されたターゲットが存在しないかまたは不正です。';
-	errMsgMap[ERR_CODE_TOO_MANY_TARGETS] = 'bindの引数に指定されたバインド先の要素が2つ以上存在します。バインド対象は1つのみにしてください。';
-	errMsgMap[ERR_CODE_BIND_CONTEXT_INVALID] = 'bindの引数に指定されたルートコンテキストが不正です。オブジェクト、データアイテム、またはObservableItemを指定してください。';
-	errMsgMap[ERR_CODE_TEMPLATE_COMPILE_SYNTAX_ERR] = 'テンプレートのコンパイルでエラーが発生しました。構文エラー：{0} {1}';
-
-	// メッセージの登録
-	addFwErrorCodeMap(errMsgMap);
+	// ログメッセージ
+	var FW_LOG_NOT_DEFINED_RULE_NAME = '指定されたルール{0}は未定義です';
 	/* del end */
 
 	// =========================================================================
@@ -16971,580 +18027,1312 @@ var h5internal = {
 	// Cache
 	//
 	// =========================================================================
-	var getDeferred = h5.async.deferred;
+	var isPromise = h5.async.isPromise;
 
 	// =========================================================================
 	//
 	// Privates
 	//
 	// =========================================================================
-
 	// =============================
 	// Variables
 	// =============================
-
-	/**
-	 * EJSテンプレート内で使用可能なヘルパー関数を格納するオブジェクト
-	 */
-	var helperExtras = {
-
-		/**
-		 * HTML文字列をエスケープします。
-		 *
-		 * @param {String} str エスケープ対象文字列
-		 * @returns {String} エスケープされた文字列
-		 */
-		escapeHtml: function(str) {
-			return h5.u.str.escapeHtml(str);
-		}
-	};
-
+	var validateRuleManager = new ValidateRuleManager();
 	// =============================
 	// Functions
 	// =============================
-
+	// =============================
+	// FIXME h5.core.dataからコピペ
+	// =============================
 	/**
-	 * jQueryオブジェクトか判定し、jQueryオブジェクトならそのまま、そうでないならjQueryオブジェクトに変換して返します。
+	 * 引数がNaNかどうか判定する。isNaNとは違い、例えば文字列はNaNではないのでfalseとする
 	 *
-	 * @function
-	 * @param {Object} obj DOM要素
-	 * @returns {Object} jQueryObject
+	 * @private
+	 * @param {Any} val 判定する値
+	 * @returns {boolean} 引数がNaNかどうか
 	 */
-	function getJQueryObj(obj) {
-		return h5.u.obj.isJQueryObject(obj) ? obj : $(obj);
+	function isStrictNaN(val) {
+		return typeof val === 'number' && isNaN(val);
 	}
 
 	/**
-	 * ViewTemplateクラス
+	 * 引数を2つ取り、両方ともisStrictNaNかどうか判定する
+	 *
+	 * @private
+	 * @param {Any} val1 判定する値
+	 * @param {Any} val2 判定する値
+	 * @returns {boolean} 引数が2つともNaNかどうか
 	 */
-	function ViewTemplate() {
-		this._templateMap = {};
+	function isBothStrictNaN(val1, val2) {
+		return isStrictNaN(val1) && isStrictNaN(val2);
 	}
-	$.extend(ViewTemplate.prototype, {
+
+	/**
+	 * type:'number' 指定のプロパティに代入できるかのチェック null,undefined,NaN,parseFloatしてNaNにならないもの
+	 * に当てはまる引数についてtrueを返す
+	 *
+	 * @private
+	 * @param {Any} val 判定する値
+	 * @param {Boolean} isStrict 厳密に判定するかどうか。isStrict === trueなら型変換可能でも型が違えばfalseを返す
+	 * @returns {boolean} type:'number'指定のプロパティに代入可能か
+	 */
+	function isNumberValue(val, isStrict) {
+		// nullまたはundefinedはtrue
+		// NaNを直接入れた場合はtrue
+		// new Number() で生成したオブジェクトはtrue
+		// 文字列の場合は、[±(数字)(.数字)]で構成されている文字列ならOKにする
+		// ※ parseFloatよりも厳しいチェックにしている。
+		// "1.2", "+1.2", "1", ".2", "-.2" はOK。
+		// "12.3px"、"12.3.4"、"123.", [12.3, 4] はいずれもparseFloatできるが、ここではNG。
+		return val == null
+				|| isStrictNaN(val)
+				|| typeof val === 'number'
+				|| (!isStrict && (val instanceof Number || !!((isString(val) || val instanceof String) && !!val
+						.match(/^[+\-]{0,1}[0-9]*\.{0,1}[0-9]+$/))));
+	}
+
+	/**
+	 * type:'integer' 指定のプロパティに代入できるかのチェック null,undefined,parseFloatとparsFloatの結果が同じもの(NaNは除く)
+	 * に当てはまる引数についてtrueを返す
+	 *
+	 * @private
+	 * @param {Any} val 判定する値
+	 * @param {Boolean} isStrict 厳密に判定するかどうか。isStrict === trueなら型変換可能でも型が違えばfalseを返す
+	 * @returns {boolean} type:'integer'指定のプロパティに代入可能か
+	 */
+	function isIntegerValue(val, isStrict) {
+		// parseIntとparseFloatの結果が同じかどうかで整数値かどうかの判定をする
+		// typeofが'nubmer'または、new Number()で生成したオブジェクトで、parseFloatとparseIntの結果が同じならtrue
+		// NaN, Infinity, -Infinityはfalseを返す(parseInt(Infinity)はNaNであるので、InfinityはIntじゃない扱いにする
+		// 文字列の場合は、[±数字]で構成されている文字列ならOKにする
+		// ※ parseIntよりも厳しいチェックにしている。"12px"、"12.3"、[12,3] はいずれもparseIntできるが、ここではNG。
+		return val == null
+				|| (typeof val === 'number' && parseInt(val) === val)
+				|| (!isStrict && (val instanceof Number && parseInt(val) === parseFloat(val) || (typeof val === 'string' || val instanceof String)
+						&& !!val.match(/^[+\-]{0,1}[0-9]+$/)));
+	}
+
+	/**
+	 * type:'string' 指定のプロパティに代入できるかのチェック
+	 *
+	 * @private
+	 * @param {Any} val 判定する値
+	 * @param {Boolean} isStrict 厳密に判定するかどうか。isStrict === trueなら型変換可能でも型が違えばfalseを返す
+	 * @returns {boolean} type:'string'指定のプロパティに代入可能か
+	 */
+	function isStringValue(val, isStrict) {
+		return !!(val == null || isString(val) || (!isStrict && val instanceof String));
+	}
+
+	/**
+	 * type:'boolean' 指定のプロパティに代入できるかのチェック
+	 *
+	 * @private
+	 * @param {Any} val 判定する値
+	 * @param {Boolean} isStrict 厳密に判定するかどうか。isStrict === trueなら型変換可能でも型が違えばfalseを返す
+	 * @returns {boolean} type:'boolean'指定のプロパティに代入可能か
+	 */
+	function isBooleanValue(val, isStrict) {
+		return val == null || typeof val === 'boolean' || (!isStrict && val instanceof Boolean);
+	}
+
+	/**
+	 * ValidationResultにデフォルトで登録するvalidateイベントリスナ
+	 *
+	 * @private
+	 */
+	function validateEventListener(ev) {
+		// thisはvalidationResult
+		// このハンドラがユーザが追加するハンドラより先に動作する前提(EventDispatcherがそういう実装)
+		// 非同期validateの結果をValidationResultに反映させる
+		var name = ev.name;
+
+		if (ev.isValid) {
+			this.validProperties.push(name);
+			this.validCount++;
+		} else {
+			this.isValid = false;
+			this.invalidProperties.push(name);
+			this.invalidCount++;
+			this.invalidReason = this.invalidReason || {};
+			this.invalidReason[name] = {
+				name: name,
+				value: ev.value,
+				violation: [ev.violation]
+			};
+		}
+		this.validatingProperties.splice($.inArray(name, this.validatingProperties), 1);
+		if (!this.validatingProperties.length) {
+			this.isAllValid = this.isValid;
+		}
+	}
+
+	/**
+	 * validation結果クラス
+	 * <p>
+	 * バリデート結果を保持するクラスです。{@link h5.validation.FormValidationLogic.validate}がこのクラスのインスタンスを返します。
+	 * </p>
+	 * <p>
+	 * このクラスは{@link EventDispatcher}のメソッドを持ち、イベントリスナを登録することができます。
+	 * </p>
+	 * <p>
+	 * このクラスは非同期バリデートの完了を通知するために以下のイベントをあげます。
+	 * </p>
+	 * <dl>
+	 * <dt>validate</dt>
+	 * <dd>
+	 * <p>
+	 * 非同期バリデートを行っているプロパティについて、どれか1つのバリデート結果が出た。
+	 * </p>
+	 * <p>
+	 * 以下のようなイベントオブジェクトを通知します。
+	 * </p>
+	 *
+	 * <pre class="sh_javascript"><code>
+	 * {
+	 * 	type: 'validate'
+	 * 	name: // バリデートが完了したプロパティ名
+	 * 	value: // バリデート対象の値
+	 * 	isValid: // バリデート結果(true/false)
+	 * 	violation:
+	 * 	// 失敗時のみ。該当プロパティについてのバリデート失敗理由({@link ValidationResult}に格納されるinvalidReason[name].violationに格納されるルールごとの違反理由オブジェクト)
+	 * }
+	 * </code></pre>
+	 *
+	 * </dd>
+	 * <dt>validateComplete</dt>
+	 * <dd>非同期バリデートを行っているすべてのプロパティのバリデートが完了した。
+	 * <p>
+	 * 以下のようなイベントオブジェクトを通知します。
+	 * </p>
+	 *
+	 * <pre class="sh_javascript"><code>
+	 * {
+	 * 	type: 'validateComplete'
+	 * }
+	 * </code></pre>
+	 *
+	 * </dd>
+	 * <dt>abort</dt>
+	 * <dd>非同期バリデートが中断された。
+	 * <p>
+	 * 以下のようなイベントオブジェクトを通知します。
+	 * </p>
+	 *
+	 * <pre class="sh_javascript"><code>
+	 * {
+	 * 	type: 'abort'
+	 * }
+	 * </code></pre>
+	 *
+	 * </dd>
+	 * </dl>
+	 *
+	 * @class
+	 * @name ValidationResult
+	 * @mixes EventDispatcher
+	 */
+	/**
+	 * @private
+	 * @param result
+	 */
+	function ValidationResult(result) {
 		/**
-		 * 受け取ったviewにこのインスタンスが持つテンプレートを登録する
-		 */
-		applyToView: function(view) {
-			var templateMap = this._templateMap;
-			for ( var p in templateMap) {
-				view.register(p, templateMap[p]);
-			}
-		},
-		/**
-		 * テンプレートマップに登録
-		 */
-		register: function(id, templateString) {
-			this._templateMap[id] = templateString;
-		},
-		/**
-		 * 別のviewTempalteとマージする
-		 */
-		marge: function(viewTemplate) {
-			$.extend(this._templateMap, viewTemplate._templateMap);
-		},
-		/**
-		 * エレメントからテンプレートマップに登録
+		 * バリデーション結果
+		 * <p>
+		 * 現在完了しているバリデート全てについてバリデートが通ったかどうかをtrueまたはfalseで保持します。
+		 * </p>
+		 * <p>
+		 * 例えば非同期バリデートがあり、全てのバリデートが完了していない場合でもisValidには判定済みのものについてバリデートが通ったかどうかを保持します。
+		 * </p>
 		 *
-		 * @param {DOM|jQuery} $templateElements テンプレートが記述されている要素(<script type="text/ejs">...</script>)
+		 * @memberOf ValidationResult
+		 * @name isValid
+		 * @type {boolean}
 		 */
-		registByElement: function compileTemplatesByElements($templateElements) {
-			$templateElements = $($templateElements);
-			if ($templateElements.length === 0) {
+		this.isValid = result.isValid;
+
+		/**
+		 * バリデートの通ったプロパティ名の配列
+		 *
+		 * @memberOf ValidationResult
+		 * @name validProperties
+		 * @type {string[]}
+		 */
+		this.validProperties = result.validProperties;
+
+		/**
+		 * バリデートの通らなかったプロパティ名の配列
+		 *
+		 * @memberOf ValidationResult
+		 * @name invalidProperties
+		 * @type {string[]}
+		 */
+		this.invalidProperties = result.invalidProperties;
+
+		/**
+		 * バリデートの終わっていないプロパティ名の配列
+		 * <p>
+		 * 非同期バリデートが完了していないプロパティ名がここに格納されます。 非同期バリデートが完了した時点で街頭プロパティはここから取り除かれ、{@link ValidationResult.validProperties}または{@link ValidationResult.invalidPropertes}に格納されます。
+		 * </p>
+		 *
+		 * @memberOf ValidationResult
+		 * @name validatingProperties
+		 * @type {string[]}
+		 */
+		this.validatingProperties = result.validatingProperties;
+
+		/**
+		 * バリデート失敗理由
+		 * <p>
+		 * バリデート失敗の理由がここに格納されます。invalidReasonは以下のようなオブジェクトです。
+		 * </p>
+		 *
+		 * <pre class="sh_javascript"><code>
+		 * {
+		 *   &quot;プロパティ名&quot;: {
+		 *     name: 'name',              // プロパティ名
+		 *     value: 101,                // バリデート対象の値
+		 *     violation: [{              // 違反理由オブジェクトの配列
+		 *       ruleName: 'max',  // バリデートを行ったルール
+		 *       param: {max:100, inclusive: true},  // バリデート関数に渡されたパラメータ
+		 *       reason: // 非同期バリデートのみ。非同期バリデート関数が返したプロミスのfailハンドラに渡された引数リスト。同期の場合は常にnull
+		 *     }]
+		 *   },
+		 *   &quot;プロパティ名&quot;: {...},
+		 *   &quot;プロパティ名&quot;: {...}
+		 * }
+		 * </code></pre>
+		 *
+		 * @memberOf ValidationResult
+		 * @name invalidReason
+		 * @type {object}
+		 */
+		this.invalidReason = result.invalidReason;
+
+		/**
+		 * バリデート成功したプロパティ数
+		 *
+		 * @memberOf ValidationResult
+		 * @name validCount
+		 * @type {integer}
+		 */
+		this.validCount = result.validProperties.length;
+
+		/**
+		 * バリデート失敗したプロパティ数
+		 *
+		 * @memberOf ValidationResult
+		 * @name invalidCount
+		 * @type {integer}
+		 */
+		this.invalidCount = result.invalidProperties.length;
+
+		/**
+		 * 非同期バリデートがあるかどうか
+		 *
+		 * @memberOf ValidationResult
+		 * @name isAsync
+		 * @type {boolean}
+		 */
+		this.isAsync = result.isAsync;
+
+		/**
+		 * 非同期バリデートも含めすべてのプロパティがバリデート成功したかどうか
+		 * <p>
+		 * 非同期バリデートがあり、まだ結果が出ていない場合はnullです。
+		 * </p>
+		 *
+		 * @memberOf ValidationResult
+		 * @name isAllValid
+		 * @type {boolean|null}
+		 */
+		this.isAllValid = result.isAllValid;
+
+		/**
+		 * バリデート対象のプロパティ名リスト
+		 *
+		 * @memberOf ValidationResult
+		 * @name properties
+		 * @type {string[]}
+		 */
+		this.properties = result.properties;
+
+		this.addEventListener(EVENT_VALIDATE, validateEventListener);
+
+		// abort()が呼ばれていたらdispatchEventを動作させない
+		this.dispatchEvent = function() {
+			if (this._aborted) {
 				return;
 			}
-			var that = this;
-			$templateElements.each(function() {
-				var templateId = $.trim(this.id);
-				var templateString = $.trim(this.innerHTML);
+			ValidationResult.prototype.dispatchEvent.apply(this, arguments);
+		};
+	}
+	// イベントディスパッチャ
+	h5.mixin.eventDispatcher.mix(ValidationResult.prototype);
+	/**
+	 * 非同期バリデートを中止する
+	 * <p>
+	 * ValidationResultが非同期バリデート結果を待機している場合、このメソッドを呼ぶとバリデートを中止し、以降validate及びvalidateCompleteイベントをあげなくなります。
+	 * </p>
+	 *
+	 * @memberOf ValidationResult
+	 * @name abort
+	 */
+	ValidationResult.prototype.abort = function() {
+		this.removeEventListener(EVENT_VALIDATE, validateEventListener);
+		this.dispatchEvent({
+			type: EVENT_VALIDATE_ABORT
+		});
+		this._aborted = true;
+	};
 
-				// 空文字または空白ならエラー
-				if (!templateId) {
-					// load()で更にdetail対してエラー情報を追加するため、ここで空のdetailオブジェクトを生成する
-					throwFwError(ERR_CODE_TEMPLATE_INVALID_ID, null, {});
+	/**
+	 * priority順に並べるための比較関数
+	 * <p>
+	 * priorityの数値の降順で返えす。(priorityに一大きい数値の指定されているものが先)
+	 *
+	 * @private
+	 * @param obj1
+	 * @param obj2
+	 * @returns {integer}
+	 */
+	function comparePriority(obj1, obj2) {
+		var p1, p2;
+		p1 = obj1.priority == null ? -Infinity : obj1.priority;
+		p2 = obj2.priority == null ? -Infinity : obj2.priority;
+		return p1 === p2 ? 0 : p2 - p1;
+	}
+
+	/**
+	 * ルールオブジェクトの管理クラス
+	 *
+	 * @class
+	 * @private
+	 */
+	function ValidateRuleManager() {
+		// ルールを優先度順に並べたもの
+		this.rules = [];
+		// ルール名→ルールオブジェクトのマップ
+		this.rulesMap = {};
+	}
+	$.extend(ValidateRuleManager.prototype, {
+		addValidateRule: function(ruleName, func, argNames, priority) {
+			var isExistAlready = this.rulesMap[ruleName];
+			if (isExistAlready) {
+				for (var i = 0, l = this.rules.length; i < l; i++) {
+					if (this.rules[i].ruleName === ruleName) {
+						this.rules.splice(i, 1);
+						break;
+					}
 				}
-				that.register(templateId, templateString);
+			}
+			var ruleObj = {
+				ruleName: ruleName,
+				func: func,
+				priority: priority,
+				argNames: argNames
+			};
+			this.rules.push(ruleObj);
+			this.rulesMap[ruleName] = ruleObj;
+		},
+		getValidateFunction: function(ruleName) {
+			return this.rulesMap[ruleName] && this.rulesMap[ruleName].func;
+		},
+		getValidateArgNames: function(ruleName) {
+			return this.rulesMap[ruleName] && this.rulesMap[ruleName].argNames;
+		},
+		sortRuleByPriority: function(ruleNames) {
+			var rulesMap = this.rulesMap;
+			ruleNames.sort(function(a, b) {
+				return comparePriority(rulesMap[a], rulesMap[b]);
 			});
 		}
-
 	});
+
+	/**
+	 * ルール定義の追加
+	 * <p>
+	 * {@link h5.validation.FormValidationLogic.addRule}で追加するルールはここで追加されたルール定義が使用されます。
+	 * </p>
+	 * <p>
+	 * 第1引数にはルール名を指定します。
+	 * </p>
+	 * <p>
+	 * 第2引数にはバリデート関数を指定します。 バリデート結果が正しい場合はtrueとなる値を返す関数を指定してください。 バリデート関数は第1引数にはバリデート対象の値、第2引数以降には{@link Validate.addRule}で指定するルールオブジェクトに記述されたパラメータが渡されます。
+	 * </p>
+	 * <p>
+	 * 第3引数にはバリデート関数に渡すパラメータのパラメータ名リストを指定します。パラメータ名は{@link ValidationResult.invalidReason}で使用されます。
+	 * </p>
+	 * <p>
+	 * 第4引数は優先度指定です。複数ルールをバリデートする場合に、どのルールから順にバリデートを行うかを優先度で指定します。
+	 * 優先度は、数値が大きいものほど優先されます。同じ優先度の場合適用順序は不定です。 デフォルトで用意されているルールの優先度は、requiredが51、その他は50で定義しています。
+	 * </p>
+	 *
+	 * @private
+	 * @param {string} ruleName ルール名
+	 * @param {Function} func バリデート関数
+	 * @param {string[]} [argNames] パラメータ名リスト
+	 * @param {number} [priority=0] 優先度
+	 */
+	function defineRule(ruleName, func, argNames, priority) {
+		// TODO 優先度は未実装
+		validateRuleManager.addValidateRule(ruleName, func, argNames, priority);
+	}
+
 	// =========================================================================
 	//
 	// Body
 	//
 	// =========================================================================
+	/**
+	 * ルールに基づいたバリデーション関数を持つオブジェクト
+	 *
+	 * @private
+	 */
+	var rule = {
+		/**
+		 * 値がnullでないかつ空文字でないことを判定する
+		 * <p>
+		 * 値がnullまたは空文字の場合はfalseを返します。
+		 * </p>
+		 *
+		 * @param {Any} value 判定する値
+		 * @returns {boolean}
+		 */
+		required: function(value) {
+			// nullでないかつ、空文字でもないこと
+			return value != null && value !== '';
+		},
+
+		/**
+		 * 値を第2引数の関数で判定した結果を返す
+		 *
+		 * @param {Any} value 判定する値
+		 * @param {Function} func 任意のバリデート関数。第1引数に判定する値が渡されます
+		 * @returns {Any}
+		 */
+		customFunc: function(value, func) {
+			return func(value);
+		},
+
+		/**
+		 * 値がfalseかどうか判定し、判定結果をtrueまたはfalseで返します
+		 * <p>
+		 * 値がnullまたはundefinedの場合はtrueを返します。
+		 * </p>
+		 * <p>
+		 * 値が真偽値でない場合はfalseを返します
+		 * </p>
+		 *
+		 * @param {Any} value 判定する値
+		 * @returns {boolean}
+		 */
+		assertFalse: function(value) {
+			return value == null || isBooleanValue(value) && value == false;
+		},
+
+		/**
+		 * 値がtrueかどうか判定し、判定結果をtrueまたはfalseで返します
+		 * <p>
+		 * 値がnullまたはundefinedの場合はtrueを返します。
+		 * </p>
+		 * <p>
+		 * 値が真偽値型でない場合はfalseを返します
+		 * </p>
+		 *
+		 * @param {Any} value 判定する値
+		 * @returns {boolean}
+		 */
+		assertTrue: function(value) {
+			return value == null || isBooleanValue(value) && value == true;
+		},
+
+		/**
+		 * 値が最大値より小さいかどうか判定し、判定結果をtrueまたはfalseで返します
+		 * <p>
+		 * 第2引数には最大値を指定して、その数値より小さいかどうか判定します。
+		 * </p>
+		 * <p>
+		 * 第3引数にtrueを指定すると、値が最大値と等しい場合もtrueを返します(デフォルトはfalse)。
+		 * </p>
+		 * <p>
+		 * 値がnullまたはundefinedの場合はtrueを返します。
+		 * </p>
+		 * <p>
+		 * 値が数値型でない場合はfalseを返します
+		 * </p>
+		 *
+		 * @param {Any} value 判定する値
+		 * @param {number} max 最大値
+		 * @param {boolean} [inclusive=false] 境界値にmaxValueを含めるかどうか
+		 * @returns {boolean}
+		 */
+		max: function max(value, max, inclusive) {
+			return value == null || (isNumberValue(value, true) || value instanceof Number)
+					&& (inclusive ? (value <= max) : (value < max));
+		},
+
+		/**
+		 * 値が最小値より大きいかどうか判定し、判定結果をtrueまたはfalseで返します
+		 * <p>
+		 * 第2引数には最小値を指定して、その数値より大きいかどうか判定します。
+		 * </p>
+		 * <p>
+		 * 第3引数にtrueを指定すると、値が最小値と等しい場合もtrueを返します(デフォルトはfalse)。
+		 * </p>
+		 * <p>
+		 * 値がnullまたはundefinedの場合はtrueを返します。
+		 * </p>
+		 * <p>
+		 * 値が数値型でない場合はfalseを返します
+		 * </p>
+		 *
+		 * @param {Any} value 判定する値
+		 * @param {number} min 最小値
+		 * @param {boolean} [inclusive=false] 境界値にmaxValueを含めるかどうか
+		 * @returns {boolean}
+		 */
+		min: function(value, min, inclusive) {
+			return value == null || (isNumberValue(value, true) || value instanceof Number)
+					&& (inclusive ? (min <= value) : (min < value));
+		},
+
+		/**
+		 * 値がnullかどうか判定し、判定結果をtrueまたはfalseで返します
+		 * <p>
+		 * 値がnullまたはundefinedの場合はtrueを返します。
+		 * </p>
+		 * <p>
+		 * それ以外の場合はfalseを返します。
+		 * </p>
+		 *
+		 * @param {Any} value 判定する値
+		 * @returns {boolean}
+		 */
+		assertNull: function(value) {
+			return value == null;
+		},
+
+		/**
+		 * 値がnullでないかどうか判定し、判定結果をtrueまたはfalseで返します
+		 * <p>
+		 * 値がnullの場合はfalseを返します。undefinedの場合はtrueを返します。
+		 * </p>
+		 * <p>
+		 * それ以外の場合はtrueを返します。
+		 * </p>
+		 *
+		 * @param {Any} value 判定する値
+		 * @returns {boolean}
+		 */
+		assertNotNull: function(value) {
+			return value === undefined ? true : value != null;
+		},
+
+		/**
+		 * 値が現在時刻より未来かどうか判定し、判定結果をtrueまたはfalseで返します
+		 * <p>
+		 * 値がnullまたはundefinedの場合はtrueを返します。
+		 * </p>
+		 * <p>
+		 * 値がDate型でない場合はfalseを返します。
+		 * </p>
+		 *
+		 * @param {Any} value 判定する値
+		 * @returns {boolean}
+		 */
+		future: function(value) {
+			return value == null || value instanceof Date && new Date().getTime() < value.getTime();
+		},
+
+		/**
+		 * 値が現在時刻より過去かどうか判定し、判定結果をtrueまたはfalseで返します
+		 * <p>
+		 * 値がnullまたはundefinedの場合はtrueを返します。
+		 * </p>
+		 * <p>
+		 * 値がDate型でない場合はfalseを返します。
+		 * </p>
+		 *
+		 * @param {Any} value 判定する値
+		 * @returns {boolean}
+		 */
+		past: function(value) {
+			return value == null || value instanceof Date && value.getTime() < new Date().getTime();
+		},
+
+		/**
+		 * 値を数値表現文字列として扱い、桁数の判定を行い、判定結果をtrueまたはfalseで返します
+		 * <p>
+		 * 第2引数には整数部分の桁数の上限を設定します。
+		 * </p>
+		 * <p>
+		 * 第3引数には小数部分の桁数の上限を設定します。
+		 * </p>
+		 * <p>
+		 * 値がnullまたはundefinedの場合はtrueを返します。
+		 * </p>
+		 * <p>
+		 * 値が文字列型でない場合はfalseを返します。
+		 * </p>
+		 * <p>
+		 * 整数部分、小数部分いずれの桁数も境界値を含めます。
+		 * </p>
+		 *
+		 * @param {Any} value 判定する値
+		 * @param {integer} integer 整数桁数の上限値
+		 * @param {integer} fruction 小数桁数の上限値
+		 * @returns {boolean}
+		 */
+		digits: function(value, integer, fruction) {
+			if (value == null) {
+				return true;
+			}
+			var typeValid = isStringValue(value);
+			if (!typeValid) {
+				return false;
+			}
+
+			// 数値表現かどうか判定
+			// 先頭が+,-,数値の何れかで始まっていること。数値.数値または数値のみであること
+			if (!/^([+|-])?\d*(\.\d+)?$/.test(value)) {
+				return false;
+			}
+
+			// 整数部分判定
+			// 数値に変換して正の数で考える
+			var num = parseInt(value);
+			num = num < 0 ? -num : num;
+			if (integer != null) {
+				// 整数部分判定
+				if (num >= Math.pow(10, integer)) {
+					return false;
+				}
+			}
+
+			if (fruction != null) {
+				// 小数部分判定
+				var pointIndex = value.indexOf('.');
+				if (pointIndex === -1) {
+					// 小数点が無い場合はvalid
+					return true;
+				}
+				// 小数部分の桁数がfruction以下の長さかどうか返す
+				return value.slice(pointIndex + 1).length <= fruction;
+			}
+			// integerもfructionもどちらもnullならvalid
+			return true;
+		},
+
+		/**
+		 * 値が正規表現を満たすかどうか判定し、判定結果をtrueまたはfalseで返します
+		 * <p>
+		 * 第2引数に正規表現オブジェクトを指定し、その正規表現を満たすかどうかの判定を行います。
+		 * </p>
+		 * <p>
+		 * 値がnullまたはundefinedの場合はtrueを返します。
+		 * </p>
+		 * <p>
+		 * 値が文字列型でない場合はfalseを返します。
+		 * </p>
+		 *
+		 * @param {Any} value 判定する値
+		 * @param {RegExp} regexp 正規表現オブジェクト
+		 * @returns {boolean}
+		 */
+		pattern: function(value, regexp) {
+			return value == null || isStringValue(value) && regexp.test(value);
+		},
+
+		/**
+		 * 配列の長さ、または文字列の長さ、オブジェクトのプロパティ数が指定された範囲内であるかどうかを判定し、判定結果をtrueまたはfalseで返します
+		 * <p>
+		 * 判定対象となる値は配列、文字列、プレーンオブジェクトの何れかです。
+		 * 配列の場合は配列の長さ、文字列の場合は文字数、プレーンオブジェクトの場合はhasOwnPropertyがtrueであるプロパティの数を判定の対象とします。
+		 * </p>
+		 * <p>
+		 * その他の型の値の場合はfalseを返します。
+		 * </p>
+		 * <p>
+		 * 第2引数でサイズの下限値、第3引数でサイズの上限値を指定し、その範囲内のサイズであるかどうかを判定します。上限値、下限値ともに境界を含めます。上限値、下限値はどちらかのみの指定が可能です。
+		 * </p>
+		 * <p>
+		 * 値がnullまたはundefinedの場合はtrueを返します。
+		 * </p>
+		 *
+		 * @param {Any} value 判定する値
+		 * @param {integer} min 下限値 (nullを指定した場合は下限値による判定は行いません)
+		 * @param {integer} max 上限値 (nullを指定した場合は上限値による判定は行いません)
+		 * @returns {boolean}
+		 */
+		size: function(value, min, max) {
+			min = min || 0;
+			max = max || Infinity;
+			if ($.isPlainObject(value)) {
+				// プレーンオブジェクトの場合プロパティの数をカウント
+				var valueSize = 0;
+				for ( var p in value) {
+					valueSize++;
+				}
+				return min <= valueSize && valueSize <= max;
+			}
+			return value == null || (isStringValue(value) || isArray(value)) && min <= value.length
+					&& value.length <= max;
+		}
+	};
 
 	/**
-	 * テンプレートを扱うクラス
+	 * FormValidationロジック
 	 * <p>
-	 * <a href="h5.core.view.html">h5.core.view</a>がこのクラスを実装しています。また、<a
-	 * href="h5.core.view.html#createView">h5.core.view.createView()</a>でこのクラスのインスタンスを生成できます。
-	 * </p>
-	 * <p>
-	 * また、コントローラは内部にController.viewインスタンスを持ち、コントローラ内であればthis.viewで参照することができます。
-	 * </p>
-	 * <p>
-	 * コントローラの持つViewについての詳細は、<a href="Controller.view.html">Controller.view</a>を参照してください。
+	 * フォーム要素を集約したオブジェクトのバリデートを行うためのロジックです。
 	 * </p>
 	 *
 	 * @class
-	 * @name View
+	 * @name h5.validation.FormValidationLogic
 	 */
-	function View() {
+	var FormValidationLogic = {
 		/**
-		 * キャッシュしたテンプレートを保持するオブジェクト
+		 * @private
+		 */
+		__name: 'h5.validation.FormValidationLogic',
+
+		/**
+		 * @private
+		 */
+		_rule: {},
+
+		/**
+		 * @private
+		 */
+		_disableProperties: [],
+
+		/**
+		 * フォームの値を集約したオブジェクトのvalidateを行う
+		 * <p>
+		 * FormValidationロジックはバリデートルールごとにバリデート対象の値を適切な型に変換してからバリデートを行います。
+		 * 例えば、値が"1"という文字列であってもmaxルールで判定する場合は1という数値に対してバリデートを行います。
+		 * </p>
+		 * <p>
+		 * また、 グループとそのグループ内のプロパティについてのvalidateに対応しています。
+		 * </p>
+		 * <p>
+		 * グループとは、第1引数のオブジェクトの中に、オブジェクトを値として持つプロパティがある場合、それをグループと言います。
+		 * そのグループ単位でのバリデートも行い、さらにグループ内のプロパティについてのバリデートを行います。
+		 * </p>
+		 * <p>
+		 * グループはネストすることはできません。
+		 * </p>
+		 * <p>
+		 * 以下はbirthdayをグループとして扱いvalidateを行う場合の例です。
+		 * </p>
+		 *
+		 * <pre class="sh_javascript"><code>
+		 * var formValidator = h5.core.logic(h5.validation.FormValidationLogic);
+		 * formValidator.addRule({
+		 * 	birthday: {
+		 * 		customFunc: function(val) {
+		 * 			// 日付として正しいか判定する
+		 * 			!isNaN(new Date(val.year, val.month - 1, val.date).getTime());
+		 * 		}
+		 * 	},
+		 * 	year: {
+		 * 		required: true
+		 * 	},
+		 * 	month: {
+		 * 		required: true
+		 * 	},
+		 * 	day: {
+		 * 		required: true
+		 * 	}
+		 * });
+		 * formValidator.validate({
+		 * 	birthday: {
+		 * 		year: 1999,
+		 * 		month: 1,
+		 * 		date: 1
+		 * 	}
+		 * });
+		 * </code></pre>
+		 *
+		 * <p>
+		 * グループはそのグループ(birthday)のルールによるvalidateが行われる。
+		 * </p>
+		 * <p>
+		 * また、year,month,dayもそれぞれのルールに基づいてvalidateが行われる。
+		 * </p>
+		 *
+		 * @memberOf h5.validation.FormValidationLogic
+		 * @param {Object} obj バリデート対象となるオブジェクト
+		 * @param {string|string[]} [names] 第1引数オブジェクトのうち、バリデートを行うキー名またはその配列(指定無しの場合は全てのキーが対象)
+		 * @returns {ValidationResult} バリデート結果
+		 */
+		validate: function(obj, names) {
+			// グループ対応。値がオブジェクトのものはグループとして扱う
+			var validateTarget = {};
+			var inGroupNames = [];
+			for ( var p in obj) {
+				if ($.isPlainObject(obj[p])) {
+					// オブジェクトの場合はその中身も展開してvalidateされるようにする
+					// なお、グループの入れ子は考慮していない
+					for ( var prop in obj[p]) {
+						validateTarget[prop] = obj[p][prop];
+						inGroupNames.push(prop);
+					}
+				}
+				validateTarget[p] = obj[p];
+			}
+			var validateNames = null;
+			if (names) {
+				validateNames = ($.isArray(names) ? names.slice(0) : [names]).concat(inGroupNames);
+			}
+			return this._validate(validateTarget, validateNames);
+		},
+
+
+		/**
+		 * バリデートルールを追加する
+		 * <p>
+		 * {@link h5.validation.FormValidationLogic.validate}でバリデートを行う際のバリデートルールを追加します。
+		 * </p>
+		 * <p>
+		 * バリデートルールは以下のようなオブジェクトで指定します。
+		 *
+		 * <pre class="sh_javascript"><code>
+		 * var formValidator = h5.core.logic(h5.validation.FormValidationLogic);
+		 * formValidator.addRule({
+		 * 	// 対象となるプロパティ名(userid)をキーにする
+		 * 	userid: {
+		 * 		// ルール名: 該当ルールのパラメータ。パラメータを取らないルールの場合はtrueを指定。複数のパラメータを取るルールの場合は配列指定。
+		 * 		required: true,
+		 * 		pattern: /&circ;[a-z|0-9]*$/,
+		 * 		size: [4, 10]
+		 * 	}
+		 * });
+		 * </code></pre>
+		 *
+		 * 上記の場合、useridは指定が必須(required指定)かつ/&circ;[a-z|0-9]*$/の正規表現を満たし(pattern指定)、4文字以上10字以下(size指定)のルールを追加しています。
+		 * </p>
+		 * <p>
+		 * 以下のようなルールが定義されています。
+		 * </p>
+		 * <table><thead>
+		 * <tr>
+		 * <th>ルール名</th>
+		 * <th>パラメータ</th>
+		 * <th>定義</th>
+		 * </tr>
+		 * </thead><tbody>
+		 * <tr>
+		 * <td>required</td>
+		 * <td>なし</td>
+		 * <td>値がnull,undefined,空文字のいずれでもないこと</td>
+		 * </tr>
+		 * <tr>
+		 * <td>customFunc</td>
+		 * <td>func</td>
+		 * <td>funcには第1引数に値を取る関数を指定する。funcがtrueを返すこと。</td>
+		 * </tr>
+		 * <tr>
+		 * <td>assertNull</td>
+		 * <td>なし</td>
+		 * <td>値がnullまたはundefinedであること</td>
+		 * </tr>
+		 * <tr>
+		 * <td>assertNotNull</td>
+		 * <td>なし</td>
+		 * <td>値がnullまたはundefinedでないこと</td>
+		 * </tr>
+		 * <tr>
+		 * <td>assertFalse</td>
+		 * <td>なし</td>
+		 * <td>値がfalseであること</td>
+		 * </tr>
+		 * <tr>
+		 * <td>assertTrue</td>
+		 * <td>なし</td>
+		 * <td>値がtrueであること</td>
+		 * </tr>
+		 * <tr>
+		 * <td>max</td>
+		 * <td>[max, inclusive]</td>
+		 * <td>inclusiveは省略可能。値がmax未満の数値であること。またinclusiveにtrueを指定した場合は境界値にmaxも含める(値がmax以下であること)。</td>
+		 * </tr>
+		 * <tr>
+		 * <td>min</td>
+		 * <td>[mix, inclusive]</td>
+		 * <td>inclusiveは省略可能。値がminより大きい数値であること。またinclusiveにtrueを指定した場合は境界値にminも含める(値がmin以上であること)。</td>
+		 * </tr>
+		 * <tr>
+		 * <td>future</td>
+		 * <td>なし</td>
+		 * <td>値がDate型で現在時刻より未来であること。</td>
+		 * </tr>
+		 * <tr>
+		 * <td>past</td>
+		 * <td>なし</td>
+		 * <td>値がDate型で現在時刻より過去であること。</td>
+		 * </tr>
+		 * <tr>
+		 * <td>digits</td>
+		 * <td>[string, fruction]</td>
+		 * <td>数値の桁数判定。整数部分がinteger桁数以下でありかつ小数部分がfruction桁数以下の数値を表す文字列であること</td>
+		 * </tr>
+		 * <tr>
+		 * <td>pattern</td>
+		 * <td>[regexp]</td>
+		 * <td>regexpには正規表現を指定。値がregexpを満たす文字列であること</td>
+		 * </tr>
+		 * <tr>
+		 * <td>size</td>
+		 * <td>[min, max]</td>
+		 * <td>値のサイズがmin以上max以下であること。ただし、値がプレーンオブジェクトの場合はプロパティの数、配列または文字列の場合はその長さをその値のサイズとする。</td>
+		 * </tr>
+		 * </tbody></table>
+		 *
+		 * @memberOf h5.validation.FormValidationLogic
+		 * @param {Object} ルールオブジェクト
+		 */
+		addRule: function(ruleObject) {
+			for ( var prop in ruleObject) {
+				var propRule = ruleObject[prop];
+				// 既に適用ルールが定義されているプロパティについては上書き
+				this._rule[prop] = propRule;
+			}
+		},
+
+		/**
+		 * ルールの削除
+		 * <p>
+		 * {@link h5.validation.FormValidationLogic.addRule}で追加したプロパティルールを削除します。
+		 * </p>
+		 * <p>
+		 * ルールの削除はプロパティ単位で行います。第1引数に対象となるプロパティ名を指定(複数指定可)します。
+		 * </p>
+		 *
+		 * @memberOf h5.validation.FormValidationLogic
+		 * @param {string|string[]} keys プロパティ名またはその配列
+		 */
+		removeRule: function(keys) {
+			if (!isArray(keys)) {
+				delete this._rule[keys];
+			}
+			for (var i = 0, l = keys.length; i < l; i++) {
+				delete this._rule[keys[i]];
+			}
+		},
+
+		/**
+		 * ルールの無効化
+		 * <p>
+		 * 第1引数に指定されたプロパティについてのバリデートを無効化します
+		 * </p>
+		 *
+		 * @memberOf h5.validation.FormValidationLogic
+		 * @param {string|string[]} name プロパティ名またはその配列
+		 */
+		disableRule: function(name) {
+			var names = wrapInArray(name);
+			for (var i = 0, l = names.length; i < l; i++) {
+				var index = $.inArray(names[i], this._disableProperties);
+				if (index === -1) {
+					this._disableProperties.push(names[i]);
+				}
+			}
+		},
+
+		/**
+		 * ルールの有効化
+		 * <p>
+		 * 第1引数に指定されたプロパティについてのバリデートを有効化します
+		 * </p>
+		 *
+		 * @memberOf h5.validation.FormValidationLogic
+		 * @param {string|string[]} name プロパティ名またはその配列
+		 */
+		enableRule: function(name) {
+			var names = wrapInArray(name);
+			for (var i = 0, l = names.length; i < l; i++) {
+				var index = $.inArray(names[i], this._disableProperties);
+				if (index !== -1) {
+					this._disableProperties.splice(index, 1);
+				}
+			}
+		},
+
+		/**
+		 * パラメータのバリデートを行う
+		 * <p>
+		 * 第1引数にはバリデート対象となるオブジェクト、第2引数には第1引数のオブジェクトのうち、バリデートを行うキー名(複数の場合は配列)を指定します。
+		 * </p>
+		 * <p>
+		 * 第2引数を省略した場合は第1引数のオブジェクトが持つすべてのキーがバリデート対象になります。
+		 * </p>
+		 * <p>
+		 * バリデートは{@link h5.validation.FormValidationLogic.addRule}によって登録されたルールで行われます。
+		 * </p>
 		 *
 		 * @private
-		 * @name __cachedTemplates
-		 * @memberOf View
+		 * @memberOf h5.validation.FormValidationLogic
+		 * @param {Object} obj バリデート対象となるオブジェクト
+		 * @param {string|string[]} [names] 第1引数オブジェクトのうち、バリデートを行うキー名またはその配列(指定無しの場合は全てのキーが対象)
+		 * @returns {ValidationResult} バリデート結果
 		 */
-		this.__cachedTemplates = {};
-	}
+		_validate: function(obj, names) {
+			var validProperties = [];
+			var invalidProperties = [];
+			var properties = [];
+			var validatingProperties = [];
+			var invalidReason = null;
+			var targetNames = names && (isArray(names) ? names : [names]);
+			var isAsync = false;
+			// プロパティ名、プロミスのマップ。1プロパティにつき非同期チェックが複数あればプロミスは複数
+			var propertyWaitingPromsies = {};
 
-	$.extend(View.prototype, {
-		/**
-		 * 指定されたパスのテンプレートファイルを非同期で読み込みキャッシュします。<br>
-		 * このメソッドでは、通信エラー発生時に自動リトライは行いません（ver.1.1.4現在。将来この動作は変更される可能性があります）。
-		 *
-		 * @memberOf View
-		 * @name load
-		 * @function
-		 * @param {String|Array[String]} resourcePaths テンプレートファイル(.ejs)のパス (配列で複数指定可能)
-		 * @returns {Promise} promiseオブジェクト
-		 */
-		load: function(resourcePaths) {
-			var dfd = getDeferred();
-			var paths = null;
+			for ( var prop in this._rule) {
+				if (names && $.inArray(prop, targetNames) === -1
+						|| $.inArray(prop, this._disableProperties) !== -1) {
+					// バリデートを行うプロパティ名指定がある場合は、そこにないプロパティの場合はバリデート対象にしない
+					// また、disableRule()でバリデートしないよう設定されているプロパティについてもバリデート対象にしない
+					continue;
+				}
+				var rule = this._rule[prop];
+				var orgValue = obj[prop];
+				var isInvalidProp = false;
+				var isAsyncProp = false;
 
-			// resourcePathsが文字列か配列でなかったらエラーを投げます。
-			switch ($.type(resourcePaths)) {
-			case 'string':
-				if (!$.trim(resourcePaths)) {
-					throwFwError(ERR_CODE_INVALID_FILE_PATH);
+				// ルールを優先度順にソート
+				var sortedRuleNames = [];
+				for ( var ruleName in rule) {
+					sortedRuleNames.push(ruleName);
 				}
-				paths = [resourcePaths];
-				break;
-			case 'array':
-				paths = resourcePaths;
-				if (paths.length === 0) {
-					throwFwError(ERR_CODE_INVALID_FILE_PATH);
-				}
-				for (var i = 0, len = paths.length; i < len; i++) {
-					if (!isString(paths[i])) {
-						throwFwError(ERR_CODE_INVALID_FILE_PATH);
-					} else if (!$.trim(paths[i])) {
-						throwFwError(ERR_CODE_INVALID_FILE_PATH);
+				validateRuleManager.sortRuleByPriority(sortedRuleNames);
+
+				// ルールについてチェックする。あるルールでバリデートエラーが起きても、他のルールもチェックする。
+				for (var i = 0, l = sortedRuleNames.length; i < l; i++) {
+					var ruleName = sortedRuleNames[i];
+					var args = rule[ruleName];
+					if ((!obj.hasOwnProperty(prop) || args == null)
+							&& !(ruleName === DEFAULT_RULE_NAME_required && args)) {
+						// そもそもvalidate対象のオブジェクトにチェック対象のプロパティがない場合、チェックしない
+						// また、argsがundefinedならそのルールはチェックしない
+						// ただし、required指定がある場合はチェックする
+						continue;
 					}
-				}
-				break;
-			default:
-				throwFwError(ERR_CODE_INVALID_FILE_PATH);
-			}
-
-			var promises = [];
-			for (var i = 0, l = paths.length; i < l; i++) {
-				promises.push(h5.res.get(paths[i]));
-			}
-			var view = this;
-			waitForPromises(promises, function(resources) {
-				// viewにテンプレートを登録
-				resources = isArray(resources) ? resources : [resources];
-				// 先に全てのテンプレートが登録できるかどうかをチェック
-				// チェックしながら登録するテンプレートを列挙する
-				var validTemplates = [];
-				var invalidTemplate;
-				for (var i = 0, l = resources.length; i < l; i++) {
-					var templates = resources[i].templates;
-					for (var j = 0, len = templates.length; j < len; j++) {
-						if (!view.isValid(templates[j].content)) {
-							invalidTemplate = templates[j];
-							break;
-						}
-						validTemplates.push(templates[j]);
+					// 値の型変換
+					var value = this._convertBeforeValidate ? this._convertBeforeValidate(orgValue,
+							ruleName) : orgValue;
+					if (isArray(args)) {
+						args = [value].concat(args);
+					} else {
+						args = [value, args];
 					}
-					if (invalidTemplate) {
+					var validateFunc = validateRuleManager.getValidateFunction(ruleName);
+					if (!validateFunc) {
+						fwLogger.warn(FW_LOG_NOT_DEFINED_RULE_NAME, ruleName);
 						break;
 					}
-				}
-				if (invalidTemplate) {
-					try {
-						// invalidなテンプレートがあったらエラーオブジェクトを取得してreject
-						view.register(invalidTemplate.id, invalidTemplate.content);
-					} catch (e) {
-						// 登録でエラーが発生したらrejectする
-						// detailにエラーが発生した時のリソースのurlとpathを追加する
-						e.detail.url = resources[i].url;
-						e.detail.path = resources[i].path;
-						return dfd.reject(e);
+
+					var ret = validateFunc.apply(this, args);
+
+					// validate関数呼び出し時の引数を格納しておく
+					var ruleValue = {};
+					var argNames = validateRuleManager.getValidateArgNames(ruleName);
+					if (argNames) {
+						for (var j = 0, len = argNames.length; j < len; j++) {
+							ruleValue[argNames[j]] = args[j + 1];
+						}
+					}
+
+					// 非同期の場合
+					if (isPromise(ret) && !isRejected(ret) && !isResolved(ret)) {
+						// pendingのプロミスが返ってきた場合
+						// 結果が返ってきたらvalidateイベントをあげるようにしておく
+						isAsyncProp = true;
+						propertyWaitingPromsies[prop] = propertyWaitingPromsies[prop] || [];
+						// プロミス自体にルール名と値と引数を覚えさせておく
+						propertyWaitingPromsies[prop].push(ret.promise({
+							ruleName: ruleName,
+							value: value,
+							ruleValue: ruleValue
+						}));
+					}
+
+					// 同期でエラーが返ってきた(falseまたはreject済みプロミスが返ってきた場合)
+					if (!ret || isPromise(ret) && isRejected(ret)) {
+						// validate関数がfalseを返したまたは、promiseを返したけどすでにreject済みの場合はvalidate失敗
+						// invalidReasonの作成
+						invalidReason = invalidReason || {};
+						if (!invalidReason[prop]) {
+							invalidReason[prop] = {
+								name: prop,
+								value: orgValue,
+								violation: []
+							};
+						}
+						invalidReason[prop].violation.push(this._createViolation(ruleName,
+								ruleValue));
+						isInvalidProp = true;
 					}
 				}
-
-				// 全てvalidならすべてのテンプレートを登録
-				for (var i = 0, l = validTemplates.length; i < l; i++) {
-					view.register(validTemplates[i].id, validTemplates[i].content);
+				if (isAsyncProp) {
+					isAsync = true;
+					validatingProperties.push(prop);
+				} else {
+					(isInvalidProp ? invalidProperties : validProperties).push(prop);
 				}
-				// TODO doneハンドラに渡す引数を作成
-				dfd.resolve();
-			}, function(e) {
-				fwLogger.error(e.message);
-				dfd.reject(e);
+				properties.push(prop);
+			}
+			var isValid = !invalidProperties.length;
+			var validationResult = new ValidationResult({
+				validProperties: validProperties,
+				invalidProperties: invalidProperties,
+				validatingProperties: validatingProperties,
+				properties: properties,
+				invalidReason: invalidReason,
+				isAsync: isAsync,
+				// isValidは現時点でvalidかどうか(非同期でvalidateしているものは関係ない)
+				isValid: isValid,
+				// 非同期でvalidateしているものがあって現時点でisValid=falseでない(=全部OKかどうか決まっていない)時はisAllValidはnull
+				isAllValid: isAsync && isValid ? null : false
 			});
-			return dfd.promise();
+
+			if (isAsync) {
+				/*
+				 * validateが全て完了しているかチェックしてvalidateCompelteを上げる関数
+				 */
+				function checkValidateComplete(result) {
+					if (result.validCount + result.invalidCount === result.properties.length) {
+						result.isAllValid = result.isValid;
+						result.dispatchEvent({
+							type: EVENT_VALIDATE_COMPLETE
+						});
+					}
+				}
+				var that = this;
+				// 非同期の場合、結果が返って気次第イベントをあげる
+				for ( var prop in propertyWaitingPromsies) {
+					var promises = propertyWaitingPromsies[prop];
+					var doneHandler = (function(_prop) {
+						return function() {
+							// あるプロパティについてのすべての非同期バリデートが終了したらvalidであることを通知
+							validationResult.dispatchEvent({
+								type: EVENT_VALIDATE,
+								name: _prop,
+								isValid: true,
+								// validate対象のオブジェクトに指定された値
+								value: obj[_prop]
+							});
+							checkValidateComplete(validationResult);
+						};
+					})(prop);
+					var failHandler = (function(_prop, _promises, _param) {
+						return function() {
+							// 一つでも失敗したらfailCallbackが実行される
+							// 既にinvalidになっていたらイベントは上げずに、何もしない
+							if ($.inArray(_prop, validationResult.invalidProperties) !== -1) {
+								return;
+							}
+							// どのルールのプロミスがrejectされたか
+							var ruleName, ruleValue, value;
+							for (var i = 0, l = _promises.length; i < l; i++) {
+								var p = _promises[i];
+								if (isRejected(p)) {
+									ruleName = p.ruleName;
+									ruleValue = p.ruleValue;
+									value = p.value;
+									break;
+								}
+							}
+							validationResult.dispatchEvent({
+								type: EVENT_VALIDATE,
+								name: _prop,
+								isValid: false,
+								value: value,
+								violation: that._createViolation(ruleName, ruleValue, arguments),
+							});
+							checkValidateComplete(validationResult);
+						};
+					})(prop, promises);
+					// failハンドラでどのプロミスの失敗かを判定したいのでwaitForPromisesではなくwhenを使用している
+					$.when.apply($, promises).done(doneHandler).fail(failHandler);
+				}
+			}
+			return validationResult;
 		},
 
 		/**
-		 * Viewインスタンスに登録されている、利用可能なテンプレートのIDの配列を返します。
+		 * ValidationResultに格納するinvalidReasonオブジェクトを作成する
 		 *
-		 * @memberOf View
-		 * @name getAvailableTemplates
-		 * @function
-		 * @returns {Array[String]} テンプレートIDの配列
+		 * @private
+		 * @memberOf h5.validation.FormValidationLogic
+		 * @param ruleName
+		 * @param ruleValue
+		 * @param failHandlerArgs 非同期バリデートの場合、failハンドラに渡された引数リスト
 		 */
-		getAvailableTemplates: function() {
-			var ids = [];
-			for ( var id in this.__cachedTemplates) {
-				ids.push(id);
+		_createViolation: function(ruleName, ruleValue, failHandlerArgs) {
+			var ret = {
+				ruleName: ruleName,
+				ruleValue: ruleValue
+			};
+			if (failHandlerArgs) {
+				ret.reason = h5.u.obj.argsToArray(failHandlerArgs);
 			}
-			return ids;
-		},
-		/**
-		 * Viewインスタンスに、指定されたIDとテンプレート文字列からテンプレートを1件登録します。
-		 * <p>
-		 * 指定されたIDのテンプレートがすでに存在する場合は上書きします。 templateStringが不正な場合はエラーを投げます。
-		 * </p>
-		 *
-		 * @memberOf View
-		 * @name register
-		 * @function
-		 * @param {String} templateId テンプレートID
-		 * @param {String} templateString テンプレート文字列
-		 */
-		register: function(templateId, templateString) {
-			if ($.type(templateString) !== 'string') {
-				throwFwError(ERR_CODE_TEMPLATE_COMPILE_NOT_STRING, null, {
-					id: templateId
-				});
-			} else if (!isString(templateId) || !$.trim(templateId)) {
-				throwFwError(ERR_CODE_TEMPLATE_INVALID_ID, []);
-			}
-			/* del begin */
-			if (this.__cachedTemplates[templateId]) {
-				fwLogger.info(FW_LOG_TEMPLATE_OVERWRITE, templateId);
-			}
-			/* del end */
-			try {
-				var compiledTemplate = new EJS.Compiler(templateString, DELIMITER);
-				compiledTemplate.compile();
-				this.__cachedTemplates[templateId] = compiledTemplate.process;
-			} catch (e) {
-				var lineNo = e.lineNumber;
-				var msg = lineNo ? ' line:' + lineNo : '';
-				throwFwError(ERR_CODE_TEMPLATE_COMPILE_SYNTAX_ERR, [msg, e.message], {
-					id: templateId
-				});
-			}
-		},
-
-		/**
-		 * テンプレート文字列が、コンパイルできるかどうかを返します。
-		 *
-		 * @memberOf View
-		 * @name isValid
-		 * @function
-		 * @returns {Boolean} 第一引数に渡されたテンプレート文字列がコンパイル可能かどうか。
-		 */
-		isValid: function(templateString) {
-			try {
-				var compiledTemplate = new EJS.Compiler(templateString, DELIMITER);
-				compiledTemplate.compile();
-				return true;
-			} catch (e) {
-				return false;
-			}
-		},
-
-		/**
-		 * パラメータで置換された、指定されたテンプレートIDのテンプレートを取得します。
-		 * <p>
-		 * 取得するテンプレート内に置換要素([%= %])が存在する場合、パラメータを全て指定してください。
-		 * </p>
-		 * <p>
-		 * templateIdがこのViewインスタンスで利用可能でなければエラーを投げます。
-		 * </p>
-		 * <p> ※ ただし、コントローラが持つviewインスタンスから呼ばれた場合、templateIdが利用可能でない場合は再帰的に親コントローラをたどり、
-		 * 親コントローラが持つViewインスタンスで利用可能かどうか確認します。 利用可能であれば、そのインスタンスのview.get()を実行します。
-		 * </p>
-		 * <p>
-		 * 一番上の親のViewインスタンスまで辿ってもtemplateId利用可能でなければ場合はh5.core.view.get()を実行します。
-		 * h5.core.viewでtemplateIdが利用可能でなければエラーを投げます。
-		 * </p>
-		 * <p>
-		 * <a href="#update">update()</a>, <a href="#append">append()</a>, <a
-		 * href="#prepend">prepend()</a>についても同様です。
-		 * </p>
-		 *
-		 * @memberOf View
-		 * @name get
-		 * @function
-		 * @param {String} templateId テンプレートID
-		 * @param {Object} [param] パラメータ(オブジェクトリテラルで指定)
-		 * @returns {String} テンプレート文字列
-		 */
-		get: function(templateId, param) {
-			var cache = this.__cachedTemplates;
-
-			if (!isString(templateId) || !$.trim(templateId)) {
-				throwFwError(ERR_CODE_TEMPLATE_INVALID_ID);
-			}
-
-			var template = cache[templateId];
-
-			if (!template) {
-				throwFwError(ERR_CODE_TEMPLATE_ID_UNAVAILABLE, templateId);
-			}
-
-			var p = (param) ? $.extend(true, {}, param) : {};
-			var helper = p.hasOwnProperty('_h') ? new EJS.Helpers(p) : new EJS.Helpers(p, {
-				_h: helperExtras
-			});
-			var ret = null;
-
-			try {
-				ret = template.call(p, p, helper);
-			} catch (e) {
-				throwFwError(ERR_CODE_TEMPLATE_PROPATY_UNDEFINED, e.toString(), e);
-			}
-
 			return ret;
 		},
 
 		/**
-		 * 要素を指定されたIDのテンプレートで書き換えます。
-		 * <p>
-		 * templateIdがこのViewインスタンスで利用可能でなければエラーを投げますが、
-		 * コントローラが持つviewインスタンスから呼ばれた場合は親コントローラのviewを再帰的にたどります。詳細は<a href="#get">get()</a>をご覧ください。
-		 * </p>
+		 * Formから取得した値のvalidateのために、値をルールに適した型へ変換を行う
 		 *
-		 * @memberOf View
-		 * @name update
-		 * @function
-		 * @param {String|Element|jQuery} element DOM要素(セレクタ文字列, DOM要素, jQueryオブジェクト)
-		 * @param {String} templateId テンプレートID
-		 * @param {Object} [param] パラメータ
-		 * @returns {jQuery} テンプレートが適用されたDOM要素(jQueryオブジェクト)
+		 * @private
+		 * @memberOf h5.validation.FormValidationLogic
+		 * @param {Any} value
+		 * @param {string} ruleName ルール名
 		 */
-		update: function(element, templateId, param) {
-			return getJQueryObj(element).html(this.get(templateId, param));
-		},
-
-		/**
-		 * 要素の末尾に指定されたIDのテンプレートを挿入します。
-		 * <p>
-		 * templateIdがこのViewインスタンスで利用可能でなければエラーを投げますが、
-		 * コントローラが持つviewインスタンスから呼ばれた場合は親コントローラのviewを再帰的にたどります。詳細は<a href="#get">get()</a>をご覧ください。
-		 * </p>
-		 *
-		 * @memberOf View
-		 * @name append
-		 * @function
-		 * @param {Element|jQuery} element DOM要素(セレクタ文字列, DOM要素, jQueryオブジェクト)
-		 * @param {String} templateId テンプレートID
-		 * @param {Object} [param] パラメータ
-		 * @returns {jQuery} テンプレートが適用されたDOM要素(jQueryオブジェクト)
-		 */
-		append: function(element, templateId, param) {
-			return getJQueryObj(element).append(this.get(templateId, param));
-		},
-
-		/**
-		 * 要素の先頭に指定されたIDのテンプレートを挿入します。
-		 * <p>
-		 * templateIdがこのViewインスタンスで利用可能でなければエラーを投げますが、
-		 * コントローラが持つviewインスタンスから呼ばれた場合は親コントローラのviewを再帰的にたどります。詳細は<a href="#get">get()</a>をご覧ください。
-		 * </p>
-		 *
-		 * @memberOf View
-		 * @name prepend
-		 * @function
-		 * @param {String|Element|jQuery} element DOM要素(セレクタ文字列, DOM要素, jQueryオブジェクト)
-		 * @param {String} templateId テンプレートID
-		 * @param {Object} [param] パラメータ
-		 * @returns {jQuery} テンプレートが適用されたDOM要素(jQueryオブジェクト)
-		 */
-		prepend: function(element, templateId, param) {
-			return getJQueryObj(element).prepend(this.get(templateId, param));
-		},
-
-		/**
-		 * 指定されたテンプレートIDのテンプレートが存在するか判定します。
-		 *
-		 * @memberOf View
-		 * @name isAvailable
-		 * @function
-		 * @param {String} templateId テンプレートID
-		 * @returns {Boolean} 判定結果(存在する: true / 存在しない: false)
-		 */
-		isAvailable: function(templateId) {
-			return !!this.__cachedTemplates[templateId];
-		},
-
-		/**
-		 * 引数に指定されたテンプレートIDをもつテンプレートをキャッシュから削除します。 引数を指定しない場合はキャッシュされている全てのテンプレートを削除します。
-		 *
-		 * @memberOf View
-		 * @name clear
-		 * @param {String|String[]} templateIds テンプレートID
-		 * @function
-		 */
-		clear: function(templateIds) {
-			if (typeof templateIds === TYPE_OF_UNDEFINED) {
-				this.__cachedTemplates = {};
-				return;
+		_convertBeforeValidate: function(value, ruleName) {
+			if (value == null) {
+				// nullまたはundefinedの場合は型変換しない
+				return value;
 			}
-
-			var templateIdsArray = null;
-			switch ($.type(templateIds)) {
-			case 'string':
-				templateIdsArray = [templateIds];
-				break;
-			case 'array':
-				if (!templateIds.length) {
-					throwFwError(ERR_CODE_TEMPLATE_INVALID_ID);
-				}
-				templateIdsArray = templateIds;
-				break;
-			default:
-				throwFwError(ERR_CODE_TEMPLATE_INVALID_ID);
+			switch (ruleName) {
+			case DEFAULT_RULE_NAME_MAX:
+			case DEFAULT_RULE_NAME_MIN:
+				return parseFloat(value);
+			case DEFAULT_RULE_NAME_FUTURE:
+			case DEFAULT_RULE_NAME_PAST:
+				return new Date(value);
 			}
-
-			for (var i = 0, len = templateIdsArray.length; i < len; i++) {
-				var id = templateIdsArray[i];
-				if (!isString(id) || !$.trim(id)) {
-					throwFwError(ERR_CODE_TEMPLATE_INVALID_ID);
-				}
-				/* del begin */
-				if (!this.__cachedTemplates[id]) {
-					fwLogger.warn(FW_LOG_TEMPLATE_NOT_REGISTERED, id);
-				}
-				/* del end */
-			}
-
-			for (var i = 0, len = templateIdsArray.length; i < len; i++) {
-				delete this.__cachedTemplates[templateIdsArray[i]];
-			}
-		},
-
-		/**
-		 * データバインドを開始します。
-		 * <p>
-		 * 注意:<br>
-		 * このメソッドではバインド対象にコメントビューを指定できません。<br>
-		 * コメントビューを使用したデータバインドは、コントローラが持つViewインスタンス(<a href="Controller.html#view">Controller.view</a>)から実行して下さい。
-		 *
-		 * @since 1.1.0
-		 * @param {String|Element|Element[]|jQuery} element コメントビュー疑似セレクタ、またはDOM要素(セレクタ文字列, DOM要素,
-		 *            DOM要素の配列, jQueryオブジェクト)。 DOM要素の配列を指定する場合、全ての要素ノードの親ノードが同じでなければいけません。
-		 * @param {Object} context データコンテキストオブジェクト
-		 * @memberOf View
-		 * @name bind
-		 * @function
-		 * @returns {Binding}
-		 */
-		bind: function(element, context) {
-			var targetNodes = null;
-
-			if (element == null) {
-				throwFwError(ERR_CODE_BIND_INVALID_TARGET);
-			}
-
-			// targetのチェック
-			if (isArray(element)) {
-				//配列はDOMノードの配列であることを仮定
-				targetNodes = element;
-			} else {
-				//targetがDOM、セレクタ文字列の場合をまとめて扱う
-				//インラインテンプレートが指定された場合はコントローラ側のview.bindが予めノード化しているので
-				//ここに到達した時にはノードになっている
-				var $element = $(element);
-
-				if ($element.length === 0) {
-					// 要素がない、もしくは見つからない場合はエラー
-					throwFwError(ERR_CODE_BIND_INVALID_TARGET);
-				}
-
-				//bind()はルートノードが複数であることをサポートするので、lengthは1には限定しない
-				//ただし、これはappend, prepend等の動作を考慮したものである。
-				//つまり、全ての要素は同じノードを親として持っていることを前提としている。
-				//厳密にはチェックすべきだが、実際に問題になることはほとんどないだろうと考え行っていない。
-				targetNodes = $element.toArray();
-			}
-
-			// contextのチェック
-			if (context == null || typeof context !== 'object' || isArray(context)
-					|| h5.core.data.isObservableArray(context)) {
-				throwFwError(ERR_CODE_BIND_CONTEXT_INVALID);
-			}
-
-			return h5internal.view.createBinding(targetNodes, context);
+			return value;
 		}
-	});
-
-	var view = new View();
-
-	/**
-	 * <a href="./View.html">View</a>クラスのインスタンスを生成します。
-	 * <p>
-	 * この関数はh5.core.viewに公開されたViewインスタンスのみが持ちます。この関数で作られたViewインスタンスはcreateView()を持ちません。
-	 * </p>
-	 *
-	 * @name createView
-	 * @memberOf h5.core.view
-	 * @function
-	 */
-	view.createView = function() {
-		return new View();
 	};
 
-	/**
-	 * HTMLに記述されたテンプレートを読み込む
-	 * <p>
-	 * HTMLにあるテンプレートが構文エラーの場合は、例外をそのままスローする。
-	 */
-	$(function() {
-		$('script[type="text/ejs"]').each(function() {
-			var templateId = $.trim(this.id);
-			var templateText = $.trim(this.innerHTML);
-
-			if (templateText.length === 0 || !templateId) {
-				return;
-			}
-
-			var compiledTemplate = new EJS.Compiler(templateText, DELIMITER);
-			compiledTemplate.compile();
-			view.__cachedTemplates[templateId] = compiledTemplate.process;
-		});
-	});
+	// デフォルトルールの追加
+	defineRule(DEFAULT_RULE_NAME_required, rule.required, null, 51);
+	defineRule(DEFAULT_RULE_NAME_CUSTOM_FUNC, rule.customFunc, ['func'], 50);
+	defineRule(DEFAULT_RULE_NAME_ASSERT_NULL, rule.assertNull, null, 50);
+	defineRule(DEFAULT_RULE_NAME_ASSERT_NOT_NULL, rule.assertNotNull, null, 50);
+	defineRule(DEFAULT_RULE_NAME_ASSERT_FALSE, rule.assertFalse, null, 50);
+	defineRule(DEFAULT_RULE_NAME_ASSERT_TRUE, rule.assertTrue, null, 50);
+	defineRule(DEFAULT_RULE_NAME_MAX, rule.max, ['max', 'inclusive'], 50);
+	defineRule(DEFAULT_RULE_NAME_MIN, rule.min, ['min', 'inclusive'], 50);
+	defineRule(DEFAULT_RULE_NAME_FUTURE, rule.future, null, 50);
+	defineRule(DEFAULT_RULE_NAME_PAST, rule.past, null, 50);
+	defineRule(DEFAULT_RULE_NAME_DIGITS, rule.digits, ['integer', 'fruction'], 50);
+	defineRule(DEFAULT_RULE_NAME_PATTERN, rule.pattern, ['regexp'], 50);
+	defineRule(DEFAULT_RULE_NAME_SIZE, rule.size, ['min', 'max'], 50);
 
 	// =============================
 	// Expose to window
 	// =============================
-
 	/**
-	 * <p>
-	 * グローバルに公開されているViewクラスのインスタンスです。
-	 * </p>
-	 * <p>
-	 * h5.core.viewは、<a href="View.html">View</a>クラスであり、<a href="View.html">View</a>クラスのメソッドを持ちます。<br>
-	 * ただし、h5.core.viewはViewクラスを生成するためのcreateViewメソッドを持ち、生成されたViewクラスはcreateViewメソッドを持ちません。
-	 * </p>
-	 *
-	 * @name view
-	 * @memberOf h5.core
-	 * @see View
 	 * @namespace
+	 * @name validation
+	 * @memberOf h5
 	 */
-	h5.u.obj.expose('h5.core', {
-		view: view
+	h5.u.obj.expose('h5.validation', {
+		defineRule: defineRule
 	});
+	h5.core.expose(FormValidationLogic);
 })();
 /* ------ h5.ui ------ */
 (function() {
@@ -19213,7 +21001,7 @@ var h5internal = {
 	 * </pre>
 	 *
 	 * <strong>パラメータにPromiseオブジェクトを指定して、done()/fail()の実行と同時にインジケータを除去する</strong><br>
-	 * resolve() または resolve() が実行されると、画面からインジケータを除去します。
+	 * resolve() または reject() が実行されると、画面からインジケータを除去します。
 	 *
 	 * <pre>
 	 * var df = $.Deferred();
@@ -19223,7 +21011,7 @@ var h5internal = {
 	 * }).show();
 	 *
 	 * setTimeout(function() {
-	 * 	df.resolve() // ここでイジケータが除去される
+	 * 	df.resolve(); // ここでインジケータが除去される
 	 * }, 2000);
 	 * </pre>
 	 *
@@ -19239,11 +21027,11 @@ var h5internal = {
 	 * }).show();
 	 *
 	 * setTimeout(function() {
-	 * 	df.resolve()
+	 * 	df.resolve();
 	 * }, 2000);
 	 *
 	 * setTimeout(function() {
-	 * 	df.resolve() // ここでイジケータが除去される
+	 * 	df.resolve(); // ここでインジケータが除去される
 	 * }, 4000);
 	 * </pre>
 	 *
@@ -20228,6 +22016,2581 @@ var h5internal = {
 				}
 			/* del end */
 			});
+})();
+(function() {
+	// =========================================================================
+	//
+	// Constants
+	//
+	// =========================================================================
+
+	// =============================
+	// Production
+	// =============================
+
+	// =============================
+	// Development Only
+	// =============================
+	var fwLogger = h5.log.createLogger('h5.ui.FormController');
+
+	/** デフォルトのルールにないルールでのバリデートエラーの場合に出すメッセージ */
+	var MSG_DEFAULT_INVALIDATE = '{0}:{1}はルール{2}を満たしません';
+
+	/* del begin */
+	// ログメッセージ
+	var FW_LOG_ERROR_CREATE_VALIDATE_MESSAGE = 'バリデートエラーメッセージの生成に失敗しました。message:{0}';
+	/* del end */
+
+	// =========================================================================
+	//
+	// Cache
+	//
+	// =========================================================================
+	// =========================================================================
+	//
+	// Privates
+	//
+	// =========================================================================
+	// =============================
+	// Variables
+	// =============================
+	/**
+	 * デフォルトエラーメッセージ
+	 */
+	var defaultInvalidMessage = {
+		required: '{displayName}は必須項目です',
+		min: function(param) {
+			return h5.u.str.format('{displayName}は{violation[0].ruleValue.min}{1}数値を入力してください。',
+					param, (param.violation[0].ruleValue.inclusive ? "以上の" : "より大きい"));
+		},
+		max: function(param) {
+			return h5.u.str.format('{displayName}は{violation[0].ruleValue.max}{1}数値を入力してください。',
+					param, (param.violation[0].ruleValue.inclusive ? "以下の" : "未満の"));
+		},
+		pattern: '{displayName}は正規表現{violation[0].ruleValue.regexp}を満たす文字列を入力してください。',
+		digits: '{displayName}は整数部分{violation[0].ruleValue.integer}桁、小数部分{fruction}桁以下の数値を入力してください。',
+		size: function(param) {
+			var upperLimitMsg = '';
+			var lowerLimitMsg = '';
+			var min = param.violation[0].ruleValue.min;
+			var max = param.violation[0].ruleValue.max;
+			if (min != null) {
+				lowerLimitMsg = h5.u.str.format('{0}以上', min);
+			}
+			if (max != null) {
+				upperLimitMsg = h5.u.str.format('{0}以下', max);
+			}
+			return h5.u.str.format('{displayName}は{1}{2}の長さでなければいけません。', param, lowerLimitMsg,
+					upperLimitMsg);
+		},
+		future: '{displayName}は現在時刻より未来の時刻を入力してください。',
+		past: '{displayName}は現在時刻より過去の時刻を入力してください。',
+		nul: '{displayName}はnullでなければなりません。',
+		notNull: '{displayName}はnullでない値を設定してください。',
+		assertFalse: '{displayName}はfalseとなる値を入力してください。',
+		assertTrue: '{displayName}はtrueとなる値を入力してください。',
+		customFunc: '{displayName}は条件を満たしません'
+	};
+
+	// =============================
+	// Functions
+	// =============================
+	/**
+	 * メッセージ生成関数
+	 *
+	 * @memberOf h5internal.validation
+	 * @private
+	 * @param {string} name
+	 * @param {Object} reason
+	 * @param {Object} setting
+	 * @returns {string} メッセージ
+	 */
+	function createValidateErrorMessage(name, reason, setting) {
+		var displayName = (setting && setting.displayName) || name;
+		var msg = setting && setting.message;
+		var param = $.extend({}, reason, {
+			displayName: displayName
+		});
+		if (isString(msg)) {
+			// messageが指定されていればh5.u.str.formatでメッセージを作成
+			return h5.u.str.format(msg, param);
+		} else if (isFunction(msg)) {
+			return msg(param);
+		}
+
+		// 何も設定されていない場合はデフォルトメッセージ
+		// デフォルトメッセージはviolationの一番最初のルールから作成する
+		var ruleName = reason.violation[0].ruleName;
+		var defaultMsg = defaultInvalidMessage[ruleName];
+		if (defaultMsg) {
+			if (isFunction(defaultMsg)) {
+				return defaultMsg(param);
+			}
+			return h5.u.str.format(defaultMsg, param);
+		}
+		// デフォルトにないルールの場合
+		return h5.u.str.format(MSG_DEFAULT_INVALIDATE, name, reason.value, ruleName);
+	}
+
+	// =========================================================================
+	//
+	// Body
+	//
+	// =========================================================================
+	// =============================
+	// Expose to window
+	// =============================
+	h5internal.validation = {
+		createValidateErrorMessage: createValidateErrorMessage
+	};
+
+	/**
+	 * メッセージ及びvalidate結果から作成したメッセージを出力するコントローラ
+	 *
+	 * @class
+	 * @name h5.ui.validation.MessageOutputController
+	 */
+	var controlelr = {
+		__name: 'h5.ui.validation.MessageOutputController',
+		_container: null,
+		_wrapper: null,
+		// validationResultからメッセージを作るための設定
+		_setting: {},
+
+		/**
+		 * メッセージ出力先要素をコンテナとして設定する
+		 *
+		 * @memberOf h5.ui.validation.MessageOutputController
+		 * @param {DOM|jQuery|string} container デフォルト出力先(コンテナ)要素をDOM要素、jQueryオブジェクト、セレクタ文字列の何れかで指定
+		 */
+		setContainer: function(container) {
+			this._container = container;
+		},
+
+		/**
+		 * メッセージ出力時にメッセージをラップする要素の設定
+		 * <p>
+		 * タグまたはタグ生成文字列をラッパーとして設定します。
+		 * </p>
+		 * <p>
+		 * タグ名を指定した場合、指定されたタグで生成した要素でメッセージをラップします。
+		 * </p>
+		 * <p>
+		 * '&lt;span class=&quot;hoge&quot;&gt;'のようなタグ生成文字列も設定でき、指定された文字列から作成した要素でメッセージをラップします。
+		 * </p>
+		 * <p>
+		 * ラッパーの指定がない場合は、このコントローラはメッセージをテキストノードとして出力します。
+		 * </p>
+		 *
+		 * @memberOf h5.ui.validation.MessageOutputController
+		 * @param {string} wrapper メッセージをラップするタグまたはタグ生成文字列
+		 */
+		setWrapper: function(wrapper) {
+			this._wrapper = wrapper;
+		},
+
+		/**
+		 * メッセージ出力先の設定を適用する
+		 * <p>
+		 * メッセージを{@link ValidationResult}から出力する([appendMessageByValidationResult]{@link h5.ui.validation.appendMessageByValidationResult}を使用する)場合の設定を行うメソッド。
+		 * </p>
+		 * <p>
+		 * プロパティ毎の設定を以下のようなオブジェクトで指定します。既に設定済みのプロパティがある場合、設定は上書かれます。
+		 * </p>
+		 *
+		 * <pre class="sh_javascript"><code>
+		 * addMessageSetting({
+		 * 	// プロパティ名をキーにして、プロパティ毎のメッセージ定義を記述
+		 * 	userid: {
+		 * 		displayName: 'ユーザID', // 表示名
+		 * 		message: '{displayName}がルール{rule}に違反しています。', // メッセージ。プレースホルダを記述可能(後述)。
+		 * 	},
+		 * 	address: {
+		 * 		message: 'アドレスが不正です'
+		 * 	}
+		 * });
+		 * </code></pre>
+		 *
+		 * <p>
+		 * message,displayName設定プロパティについては{@link h5.ui.FormController.setSetting}をご覧ください。
+		 * </p>
+		 *
+		 * @memberOf h5.ui.validation.MessageOutputController
+		 * @param {Object} messageSetting プロパティ毎のメッセージ定義。{プロパティ名: {message:..., displayName:...}}
+		 *            のようなオブジェクト
+		 */
+		addMessageSetting: function(messageSetting) {
+			if (!this._setting) {
+				this._setting = messageSetting;
+				return;
+			}
+			for ( var prop in messageSetting) {
+				// 既にメッセージ定義が設定されているプロパティについては上書き
+				this._setting[prop] = messageSetting[prop];
+			}
+		},
+
+		/**
+		 * コンテナからメッセージを削除
+		 * <p>
+		 * {@link h5.ui.validation.MessageOutputController.setContainer|setContainer}で設定した出力先からメッセージを削除します。出力先未設定の場合は何もしません。
+		 * </p>
+		 *
+		 * @memberOf h5.ui.validation.MessageOutputController
+		 */
+		clearMessage: function() {
+			if (this._container) {
+				$(this._container).empty();
+			}
+		},
+
+		/**
+		 * メッセージの追加表示
+		 * <p>
+		 * {@link h5.ui.validation.MessageOutputController.setContainer|setContainer}で設定済みコンテナにメッセージを出力します。コンテナ未設定の場合は何もしません。
+		 * </p>
+		 * <p>
+		 * メッセージは{@link h5.ui.validation.MessageOutputController.setWrapper|setWrapper}で設定したラッパーで包んで出力します。ラッパー未設定の場合はテキストノードとしてしゅつりょくします。
+		 * </p>
+		 *
+		 * @param {string} message メッセージ
+		 */
+		appendMessage: function(message) {
+			// 未指定ならsettingに設定されたコンテナ
+			var container = this._container;
+			var $container = $(container);
+			if (!$container.length) {
+				return;
+			}
+
+			var wrapper = this._wrapper;
+			if (wrapper) {
+				if (h5.u.str.startsWith($.trim(wrapper), '<')) {
+					// '<span class="hoge">'のような指定ならその文字列でDOM生成
+					msgElement = $(wrapper);
+					msgElement.text(message);
+				} else {
+					// 'span'のような指定ならcreateElementでエレメント生成
+					msgElement = $(document.createElement(wrapper)).html(message);
+				}
+			} else {
+				// wrapper未設定ならテキストノード
+				msgElement = document.createTextNode(message);
+			}
+			$container.append(msgElement);
+		},
+
+		/**
+		 * {@link ValidationResult}からエラーメッセージを作成して返す
+		 * <p>
+		 * 第1引数に指定されたプロパティ名についてのエラーメッセージを作成して返します
+		 * </p>
+		 * <p>
+		 * 指定されたプロパティがエラーでない場合はnullを返します。
+		 * </p>
+		 *
+		 * @memberOf h5.ui.validation.MessageOutputController
+		 * @param {ValidationResult} validationResult
+		 * @param {string} name 対象のプロパティ名
+		 * @returns {string} エラーメッセージ
+		 */
+		getMessageByValidationResult: function(validationResult, name) {
+			var invalidReason = validationResult.invalidReason[name];
+			if (!invalidReason) {
+				return null;
+			}
+			return h5internal.validation.createValidateErrorMessage(name, invalidReason,
+					this._setting[name]);
+		},
+
+		/**
+		 * {@link ValidationResult}からメッセージを作成してコンテナに追加表示する
+		 * <p>
+		 * {@link ValidationResult}が非同期バリデート待ちの場合は、結果が返ってきたタイミングでメッセージを表示します。
+		 * </p>
+		 * <p>
+		 * {@link h5.ui.validation.MessageOutputController.setContainer|setContainer}で設定済みコンテナにメッセージを出力します。コンテナ未設定の場合は何もしません。
+		 * </p>
+		 * <p>
+		 * メッセージは{@link h5.ui.validation.MessageOutputController.setWrapper|setWrapper}で設定したラッパーで包んで出力します。ラッパー未設定の場合はテキストノードとしてしゅつりょくします。
+		 * </p>
+		 *
+		 * @memberOf h5.ui.validation.MessageOutputController
+		 * @param {ValidationResult} validationResult
+		 * @param {string|string[]} [names] 出力対象のプロパティ名。指定しない場合は全てが対象
+		 */
+		appendMessageByValidationResult: function(validationResult, names) {
+			var invalidProperties = validationResult.invalidProperties;
+			names = isString(names) ? [names] : names;
+			for (var i = 0, l = invalidProperties.length; i < l; i++) {
+				var name = invalidProperties[i];
+				if (names && $.inArray(name, names) === -1) {
+					continue;
+				}
+				var message = this.getMessageByValidationResult(validationResult, name);
+				this.appendMessage(message);
+			}
+			if (validationResult.isAllValid === null) {
+				// 非同期でまだ結果が返ってきていないものがある場合
+				validationResult.addEventListener('validate', this.own(function(ev) {
+					if (!ev.isValid && !names || $.inArray(ev.name, names) !== -1) {
+						var invalidReason = ev.target.invalidReason[ev.name];
+						var message = h5internal.validation.createValidateErrorMessage(ev.name,
+								invalidReason, this._setting[ev.name]);
+						this.appendMessage(message);
+					}
+				}));
+				return;
+			}
+		}
+	};
+	h5.core.expose(controlelr);
+})();
+
+(function() {
+	var STATE_ERROR = 'error';
+	var STATE_SUCCESS = 'success';
+	var STATE_VALIDATING = 'validating';
+
+	/**
+	 * バリデートエラー箇所の要素にクラスを追加するための[FormController]{@link h5.ui.validation.FormController}プラグイン
+	 * <p>
+	 * styleプラグインには以下の設定項目があります。
+	 * </p>
+	 * <table><thead>
+	 * <tr>
+	 * <th>設定項目</th>
+	 * <th>型</th>
+	 * <th>説明</th>
+	 * <th>デフォルト値</th>
+	 * </tr>
+	 * </thead><tbody>
+	 * <tr>
+	 * <th>errorClassName</th>
+	 * <td>string</td>
+	 * <td>バリデートエラー時に適用するクラス名</td>
+	 * <td>なし</td>
+	 * </tr>
+	 * <tr>
+	 * <th>successClassName</th>
+	 * <td>string</td>
+	 * <td>バリデート成功時に適用するクラス名</td>
+	 * <td>なし</td>
+	 * </tr>
+	 * <tr>
+	 * <th>validatingClassName</th>
+	 * <td>string</td>
+	 * <td>非同期バリデートの結果待機時に適用するクラス名</td>
+	 * <td>なし</td>
+	 * </tr>
+	 * </tbody></table>
+	 * <p>
+	 * プラグインの設定方法は、{@link h5.ui.FormController.setSetting}をご覧ください。
+	 * </p>
+	 *
+	 * @class
+	 * @name h5.ui.validation.Style
+	 */
+	var controller = {
+		__name: 'h5.ui.validation.Style',
+		/**
+		 * プラグイン設定
+		 *
+		 * @private
+		 * @memberOf h5.ui.validaiton.Style
+		 */
+		_setting: {},
+
+		/**
+		 * このプラグインがスタイルを適用した要素
+		 * <p>
+		 * キーにプロパティ名、値に要素を覚えておく
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Style
+		 */
+		_styleAppliedElements: {},
+
+		/**
+		 * プラグイン設定を行う
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Style
+		 * @param {Object} setting styleプラグイン設定オブジェクト
+		 */
+		_setSetting: function(setting) {
+			this._setting = setting;
+		},
+
+		/**
+		 * バリデート時に呼ばれる
+		 * <p>
+		 * {@link ValidationResult}から、各要素にクラスを設定する
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Style
+		 * @param {ValidationResult} result
+		 */
+		_onValidate: function(validationResult) {
+			// validだったものにクラスを適用
+			var properties = validationResult.properties;
+			for (var i = 0, l = properties.length; i < l; i++) {
+				var name = properties[i];
+				this._setStyle(this.parentController._getElementByName(name), name,
+						validationResult);
+			}
+		},
+
+		/**
+		 * フォーム部品フォーカス時に呼ばれる
+		 * <p>
+		 * イベントの発生したフォーム部品のバリデート結果を適用
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Style
+		 * @param {DOM} element イベント発生要素
+		 * @param {string} name イベント発生要素の名前(グループの場合はグループ名)
+		 * @param {ValidationResult} validationResult
+		 */
+		_onFocus: function(element, name, validationResult) {
+			this._setStyle(element, name, validationResult);
+		},
+
+		/**
+		 * フォーム部品のkeyup時に呼ばれる
+		 * <p>
+		 * イベントの発生したフォーム部品のバリデート結果を適用
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Style
+		 * @param {DOM} element イベント発生要素
+		 * @param {string} name イベント発生要素の名前(グループの場合はグループ名)
+		 * @param {ValidationResult} validationResult
+		 */
+		_onKeyup: function(element, name, validationResult) {
+			this._setStyle(element, name, validationResult);
+		},
+
+		/**
+		 * プラグインのリセット
+		 * <p>
+		 * 全てのフォームコントロール部品からプラグインが追加したクラスを全て削除します
+		 * </p>
+		 *
+		 * @memberOf h5.ui.validation.Style
+		 */
+		reset: function() {
+			// このプラグインが触った要素全てからクラスを削除
+			for ( var name in this._styleAppliedElements) {
+				var element = this._styleAppliedElements[name];
+				var propSetting = $.extend({}, this._setting, this._setting.property
+						&& this._setting.property[name]);
+				this._setValidateState(null, element, propSetting, name);
+			}
+		},
+
+		/**
+		 * バリデート結果からクラスをセットする
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Style
+		 * @param element
+		 * @param name
+		 * @param validationResult
+		 */
+		_setStyle: function(element, name, validationResult) {
+			// 共通設定とプロパティ毎の設定をマージ
+			var propSetting = $.extend({}, this._setting, this._setting.property
+					&& this._setting.property[name]);
+			if (propSetting.off) {
+				// off指定されていれば何もしない
+				return;
+			}
+			var replaceElement = propSetting.replaceElement;
+			var element = isFunction(replaceElement) ? replaceElement(element)
+					: (replaceElement || element);
+			if (!element) {
+				return;
+			}
+			if ($.inArray(name, validationResult.validatingProperties) !== -1) {
+				// まだvalidate結果が返ってきていない場合
+				this._setValidateState(STATE_VALIDATING, element, propSetting);
+				validationResult.addEventListener('validate', this.own(function(ev) {
+					if (ev.name === name) {
+						this._setValidateState(ev.isValid ? STATE_SUCCESS : STATE_ERROR, element,
+								propSetting, name);
+					}
+				}));
+				return;
+			}
+			// invalidPropertiesに入っていればエラー扱い、そうでない場合は成功扱い
+			// (そもそもルールの指定が無くvalidation対象じゃない(propertiesに入っていない)場合は成功扱い)
+			this._setValidateState(
+					$.inArray(name, validationResult.invalidProperties) === -1 ? STATE_SUCCESS
+							: STATE_ERROR, element, propSetting, name);
+		},
+
+		/**
+		 * バリデート結果からクラスをセットする
+		 * <p>
+		 * 第1引数にerror,success,valiatingの何れかを取り、該当する状態のクラス名を設定する
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Style
+		 * @param state
+		 * @param element
+		 * @param propSetting 適用する設定オブジェクト
+		 * @param 対応するプロパティ名
+		 */
+		_setValidateState: function(state, element, propSetting, name) {
+			var errorClassName = propSetting.errorClassName;
+			var successClassName = propSetting.successClassName;
+			var validatingClassName = propSetting.validatingClassName;
+			$(element).removeClass(errorClassName).removeClass(successClassName).removeClass(
+					validatingClassName);
+			if (!state) {
+				return;
+			}
+			var className = propSetting[state + 'ClassName'];
+			$(element).addClass(className);
+			this._styleAppliedElements[name] = element;
+		}
+	};
+	h5.core.expose(controller);
+})();
+
+(function() {
+	/**
+	 * validate時にエラーがあった時、エラーメッセージを表示するプラグイン
+	 * <p>
+	 * compositionプラグインには以下の設定項目があります。
+	 * </p>
+	 * <table><thead>
+	 * <tr>
+	 * <th>設定項目</th>
+	 * <th>型</th>
+	 * <th>説明</th>
+	 * <th>デフォルト値</th>
+	 * </tr>
+	 * </thead><tbody>
+	 * <tr>
+	 * <th>container</th>
+	 * <td>DOM|jQuery|string</td>
+	 * <td>メッセージ表示先となるコンテナ要素。</td>
+	 * <td>なし</td>
+	 * </tr>
+	 * <tr>
+	 * <th>wrapper</th>
+	 * <td>string</td>
+	 * <td>メッセージを出力する要素のタグ名またはタグ生成文字列。'li'や、'&lt;span
+	 * class="error-msg"&gt;'のような指定ができ、指定された文字列から生成した要素が各メッセージ要素になります。</td>
+	 * <td>なし(テキストノードとして表示)</td>
+	 * </tr>
+	 * </tbody></table>
+	 * <p>
+	 * プラグインの設定方法は、{@link h5.ui.FormController.setSetting}をご覧ください。
+	 * </p>
+	 *
+	 * @class
+	 * @name h5.ui.validation.Composition
+	 */
+	var controller = {
+		__name: 'h5.ui.validation.Composition',
+		_messageOutputController: h5.ui.validation.MessageOutputController,
+		/**
+		 * プラグイン設定
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Composition
+		 */
+		_setting: {},
+
+		/**
+		 * プラグイン設定を行う
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Composition
+		 * @param {Object} setting compositionプラグイン設定オブジェクト
+		 */
+		_setSetting: function(setting) {
+			this._setting = setting;
+			if (this.isInit) {
+				this._setChildSetting();
+			} else {
+				// 子コントローラの設定は子コントローラのコントローラ化が終わってから
+				this.initPromise.done(this.own(this._setChildSetting));
+			}
+		},
+
+		/**
+		 * バリデート時に呼ばれる
+		 * <p>
+		 * バリデート結果からメッセージを生成して表示
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Composition
+		 * @param {ValidationResult} validationResult
+		 */
+		_onValidate: function(validationResult) {
+			this._messageOutputController.clearMessage();
+			this._messageOutputController.appendMessageByValidationResult(validationResult);
+		},
+
+		/**
+		 * プラグインのリセット
+		 * <p>
+		 * メッセージを削除します
+		 * </p>
+		 *
+		 * @memberOf h5.ui.validation.Composition
+		 */
+		reset: function() {
+			this._messageOutputController.clearMessage();
+		},
+
+		/**
+		 * メッセージ出力コントローラの設定
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Composition
+		 */
+		_setChildSetting: function() {
+			var setting = this._setting;
+			// 出力先の設定
+			this._messageOutputController.setContainer(setting.container);
+			this._messageOutputController.setWrapper(setting.wrapper);
+
+			// 各プロパティ毎のメッセージ設定をする
+			var property = setting.property;
+			var messageSetting = {};
+			for ( var p in property) {
+				messageSetting[p] = {
+					displayName: property[p].displayName || setting.displayName,
+					message: property[p].message || setting.message,
+					formatter: property[p].formatter || setting.formatter,
+				};
+			}
+			this._messageOutputController.addMessageSetting(messageSetting);
+		}
+	};
+	h5.core.expose(controller);
+})();
+
+(function() {
+	var DEFAULT_PLACEMENT = 'top';
+	/**
+	 * validate時にエラーがあった時、エラーバルーンを表示するプラグイン
+	 * <p>
+	 * baloonプラグインには以下の設定項目があります。
+	 * </p>
+	 * <table><thead>
+	 * <tr>
+	 * <th>設定項目</th>
+	 * <th>型</th>
+	 * <th>説明</th>
+	 * <th>デフォルト値</th>
+	 * </thead><tbody>
+	 * <tr>
+	 * <th>placement</th>
+	 * <td>string</td>
+	 * <td>バルーンを表示する位置。top,right,bottom,leftの何れかで指定。</td>
+	 * <td>top</td>
+	 * </tr>
+	 * <tr>
+	 * <th>container</th>
+	 * <td>DOM|jQuery|string</td>
+	 * <td>バルーン要素を配置するコンテナ。表示位置ではなくDOMツリー上で配置するときのバルーン要素の親要素となる要素を指定します。指定しない場合は対象要素の親要素。</td>
+	 * <td>なし</td>
+	 * </tr>
+	 * </tbody></table>
+	 * <p>
+	 * プラグインの設定方法は、{@link h5.ui.FormController.setSetting}をご覧ください。
+	 * </p>
+	 *
+	 * @class
+	 * @name h5.ui.validation.ErrorBaloon
+	 */
+	var controller = {
+		__name: 'h5.ui.validation.ErrorBaloon',
+		_executedOnValidate: false,
+		_messageOutputController: h5.ui.validation.MessageOutputController,
+		_setting: {},
+
+		/**
+		 * プラグイン設定を行う
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.ErrorBaloon
+		 * @param {Object} setting bsBaloonプラグイン設定オブジェクト
+		 */
+		_setSetting: function(setting) {
+			this._setting = setting;
+			if (this.isInit) {
+				this._setChildSetting();
+			} else {
+				// 子コントローラの設定は子コントローラのコントローラ化が終わってから
+				this.initPromise.done(this.own(this._setChildSetting));
+			}
+		},
+
+		/**
+		 * バリデート時に呼ばれる
+		 * <p>
+		 * バリデート結果からバルーンの表示・非表示を行う
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.ErrorBaloon
+		 * @param {ValidationResult} result
+		 */
+		_onValidate: function(result) {
+			this._executedOnValidate = true;
+		},
+
+		/**
+		 * 要素にフォーカスした時に呼ばれる
+		 * <p>
+		 * バリデート結果からバルーンの表示・非表示を行う
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.ErrorBaloon
+		 * @param element
+		 * @param name
+		 * @param {ValidationResult} validationResult
+		 */
+		_onFocus: function(element, name, validationResult) {
+			this._setErrorBaloon(element, name, validationResult, 'focus');
+		},
+
+		/**
+		 * 要素からフォーカスが外れた時に呼ばれる
+		 * <p>
+		 * バリデート結果からバルーンの表示・非表示を行う
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.ErrorBaloon
+		 * @param element
+		 * @param name
+		 * @param {ValidationResult} validationResult
+		 */
+		_onBlur: function(element, name, validationResult) {
+			this._setErrorBaloon(element, name, validationResult, 'blur');
+		},
+
+		/**
+		 * 要素のキーアップ時に呼ばれる
+		 * <p>
+		 * バリデート結果からバルーンの表示・非表示を行う
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.ErrorBaloon
+		 * @param element
+		 * @param name
+		 * @param {ValidationResult} validationResult
+		 */
+		_onKeyup: function(element, name, validationResult) {
+			this._setErrorBaloon(element, name, validationResult, 'keyup');
+		},
+
+		/**
+		 * プラグインのリセット
+		 * <p>
+		 * 表示されているバルーンを削除します
+		 * </p>
+		 *
+		 * @memberOf h5.ui.validation.ErrorBaloon
+		 */
+		reset: function() {
+			this._hideBaloon();
+			this._executedOnValidate = false;
+		},
+
+		/**
+		 * バルーンをセット
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.ErrorBaloon
+		 * @param element
+		 * @param name
+		 * @param {ValidationResult} validationResult
+		 * @param {string} type 要素で発生したイベントタイプ
+		 */
+		_setErrorBaloon: function(element, name, validationResult, type) {
+			if (!this._executedOnValidate) {
+				// _onValidateが１度も呼ばれていなければ何もしない
+				return;
+			}
+			// 共通設定とプロパティ毎の設定をマージ
+			var propSetting = $.extend({}, this._setting, this._setting.property
+					&& this._setting.property[name]);
+			if (propSetting.off) {
+				// off指定されていれば何もしない
+				return;
+			}
+			var replaceElement = propSetting.replaceElement;
+			var target = isFunction(replaceElement) ? replaceElement(element)
+					: (replaceElement || element);
+			if (!target) {
+				return;
+			}
+
+			if (type === 'blur'
+					|| (element !== document.activeElement && !$(document.activeElement).closest(
+							element).length)) {
+				// フォーカスが外れた時、該当要素または該当要素内の要素にフォーカスが当たっていない場合は非表示にする
+				this._hideBaloon();
+				return;
+			}
+			var placement = propSetting.placement || DEFAULT_PLACEMENT;
+			var container = propSetting.container || null;
+
+			if ($.inArray(name, validationResult.validatingProperties) !== -1) {
+				// 非同期バリデートの結果待ちの場合
+				validationResult.addEventListener('validate', this.own(function(ev) {
+					if (element !== document.activeElement) {
+						return;
+						// 非同期バリデート終了時に既にフォーカスが外れていたら何もしない
+					}
+					if (ev.isValid) {
+						// validならバルーンを隠す
+						this._hideBaloon();
+						return;
+					}
+					// invalidならバルーン表示
+					this._showBaloon(target, placement, container, this._messageOutputController
+							.getMessageByValidationResult(validationResult, ev.name));
+				}));
+				return;
+			}
+			var invalidReason = validationResult.invalidReason
+					&& validationResult.invalidReason[name];
+			if (!invalidReason) {
+				// validateエラーがないときはhideして終了
+				this._hideBaloon();
+				return;
+			}
+
+			// validateエラーがあるとき
+			this._showBaloon(target, placement, container, this._messageOutputController
+					.getMessageByValidationResult(validationResult, name));
+		},
+
+		/**
+		 * バルーンを表示
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.ErrorBaloon
+		 * @param target
+		 * @param placement
+		 * @param message
+		 */
+		_showBaloon: function(target, placement, container, message) {
+			this._hideBaloon();
+			var baloonCtrl = this._baloonController;
+			if (!baloonCtrl) {
+				var c = h5.core.controller(this.rootElement, h5.ui.components.BaloonController);
+				this.manageChild(c);
+				c.readyPromise.done(this.own(function() {
+					this._baloonController = c;
+					this._showBaloon(target, placement, container, message);
+				}));
+				return;
+			}
+			var baloon = this._baloonController.create(message);
+			// 吹き出しの表示
+			baloon.show({
+				target: target,
+				direction: placement
+			});
+			this._currentBaloon = baloon;
+			this._currentBaloonTarget = target;
+		},
+
+		/**
+		 * バルーンを非表示
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.ErrorBaloon
+		 * @param target
+		 * @param placement
+		 * @param message
+		 */
+		_hideBaloon: function(target, placement, container, message) {
+			if (this._currentBaloon) {
+				this._currentBaloon.dispose();
+				this._currentBaloon = null;
+			}
+			this._currentBaloonTarget = null;
+		},
+
+		/**
+		 * メッセージ出力コントローラの設定
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.ErrorBaloon
+		 */
+		_setChildSetting: function() {
+			var setting = this._setting;
+
+			// 各プロパティ毎のメッセージ設定をする
+			var property = setting.property;
+			var messageSetting = {};
+			for ( var p in property) {
+				messageSetting[p] = {
+					displayName: property[p].displayName || setting.displayName,
+					message: property[p].message || setting.message,
+					formatter: property[p].formatter || setting.formatter,
+				};
+			}
+			this._messageOutputController.addMessageSetting(messageSetting);
+		}
+	};
+	h5.core.expose(controller);
+})();
+
+(function() {
+	var DEFAULT_PLACEMENT = 'top';
+	/**
+	 * validate時にエラーがあった時、Bootstrapのエラーバルーンを表示するプラグイン
+	 * <p>
+	 * このプラグインはBootstrapに依存します。Bootstrapのtooltipを使用して表示してています。
+	 * </p>
+	 * <p>
+	 * API仕様は{@link h5.ui.validation.ErrorBaloon}と同じです。
+	 * </p>
+	 * <p>
+	 * プラグインの設定方法は、{@link h5.ui.FormController.setSetting}をご覧ください。
+	 * </p>
+	 *
+	 * @class
+	 * @name h5.ui.validation.BootstrapErrorBaloon
+	 */
+	var controller = {
+		__name: 'h5.ui.validation.BootstrapErrorBaloon',
+
+		/**
+		 * バルーンの削除
+		 * <p>
+		 * 表示されているバルーンを削除します
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.BootstrapErrorBaloon
+		 */
+		_hideBaloon: function() {
+			// 常にバルーンは一つのみ表示している実装のため、その1つのバルーンを非表示
+			$(this._currentBaloonTarget).tooltip('hide');
+		},
+
+		/**
+		 * bootstrapのtooltipを使ってバルーンを表示
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.BootstrapErrorBaloon
+		 * @param target
+		 * @param placement
+		 * @param container
+		 * @param message
+		 */
+		_showBaloon: function(target, placement, container, message) {
+			$(target).attr({
+				'data-placement': placement,
+				'data-container': container,
+				'data-original-title': message,
+				// FIXME animationをtrueにすると、show/hide/showを同期で繰り返した時に表示されない
+				// (shown.bs.tooltipイベントとか拾って制御する必要あり)
+				// 一旦animationをoffにしている
+				'data-animation': false
+			}).tooltip({
+				trigger: 'manual'
+			});
+			$(target).tooltip('show');
+			this._currentBaloonTarget = target;
+		}
+	};
+	// 他のメソッドやプロパティはErrorBaloonから流用
+	controller = $.extend({}, h5.ui.validation.ErrorBaloon, controller);
+	h5.core.expose(controller);
+})();
+
+(function() {
+	/**
+	 * validate時にエラーがあった時、エラーメッセージを表示するプラグイン
+	 * <p>
+	 * messageプラグインには以下の設定項目があります。
+	 * </p>
+	 * <table><thead>
+	 * <tr>
+	 * <th>設定項目</th>
+	 * <th>型</th>
+	 * <th>説明</th>
+	 * <th>デフォルト値</th>
+	 * </tr>
+	 * </thead><tbody>
+	 * <tr>
+	 * <th>appendMessage</th>
+	 * <td>function</td>
+	 * <td>メッセージ要素配置関数。メッセージ要素の配置を行う関数を指定します。第1引数にメッセージ要素(DOM)、第2引数にプロパティ名、第3引数にメッセージ追加対象要素が渡されます。指定しない場合は、メッセージ追加対象要素の後ろに追加します。</td>
+	 * <td>なし</td>
+	 * </tr>
+	 * <tr>
+	 * <th>wrapper</th>
+	 * <td>string</td>
+	 * <td>メッセージを出力する要素のタグ名またはタグ生成文字列。'li'や、'&lt;span
+	 * class="error-msg"&gt;'のような指定ができ、指定された文字列から生成した要素が各メッセージ要素になります。</td>
+	 * <td>なし(テキストノードとして表示)</td>
+	 * </tr>
+	 * </tbody></table>
+	 * <p>
+	 * プラグインの設定方法は、{@link h5.ui.FormController.setSetting}をご覧ください。
+	 * </p>
+	 *
+	 * @class
+	 * @name h5.ui.validation.Message
+	 */
+	var controller = {
+		__name: 'h5.ui.validation.Message',
+		_executedOnValidate: false,
+		_messageElementMap: {},
+		_messageOutputController: h5.ui.validation.MessageOutputController,
+
+		/**
+		 * プラグイン設定を行う
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Message
+		 * @param {Object} setting messageプラグイン設定オブジェクト
+		 */
+		_setSetting: function(setting) {
+			this._setting = setting;
+			if (this.isInit) {
+				this._setChildSetting();
+			} else {
+				// 子コントローラの設定は子コントローラのコントローラ化が終わってから
+				this.initPromise.done(this.own(this._setChildSetting));
+			}
+		},
+
+		/**
+		 * バリデート時に呼ばれる
+		 * <p>
+		 * バリデート結果からメッセージの表示・非表示を行う
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Message
+		 * @param {ValidationResult} result
+		 */
+		_onValidate: function(result) {
+			this._executedOnValidate = true;
+			var validProperties = result.validProperties;
+			for (var i = 0, l = validProperties.length; i < l; i++) {
+				var name = validProperties[i];
+				this._setMessage(this.parentController._getElementByName(name), name, result);
+			}
+		},
+
+		/**
+		 * 要素にフォーカスされた時に呼ばれる
+		 * <p>
+		 * バリデート結果からメッセージの表示・非表示を行う
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Message
+		 * @param element
+		 * @param name
+		 * @param {ValidationResult} validationResult
+		 */
+		_onFocus: function(element, name, validationResult) {
+			this._setMessage(element, name, validationResult, 'focus');
+		},
+
+		/**
+		 * 要素からフォーカスが外れた時に呼ばれる
+		 * <p>
+		 * バリデート結果からバルーンの表示・非表示を行う
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Message
+		 * @param element
+		 * @param name
+		 * @param {ValidationResult} validationResult
+		 */
+		_onBlur: function(element, name, validationResult) {
+			this._setMessage(element, name, validationResult, 'blur');
+		},
+		// FIXME どのタイミングで実行するかは設定で決める？
+		//		_onChange: function(element, name, validationResult) {
+		//			this._setMessage(element, name, validationResult);
+		//		},
+		//		_onKeyup: function(element, name, validationResult) {
+		//			this._setMessage(element, name, validationResult);
+		//		},
+		//		_onClick: function(element, name, validationResult) {
+		//			this._setMessage(element, name, validationResult);
+		//		},
+
+		/**
+		 * プラグインのリセット
+		 * <p>
+		 * 表示されているメッセージを削除します
+		 * </p>
+		 *
+		 * @memberOf h5.ui.validation.Message
+		 */
+		reset: function() {
+			for ( var p in this._messageElementMap) {
+				var $target = this._messageElementMap[name];
+				$target && $target.remove();
+			}
+			this._executedOnValidate = false;
+		},
+
+		_setMessage: function(element, name, validationResult, type) {
+			if (!this._executedOnValidate) {
+				// _onValidateが１度も呼ばれていなければ何もしない
+				return;
+			}
+			// 共通設定とプロパティ毎の設定をマージ
+			var propSetting = $.extend({}, this._setting, this._setting.property
+					&& this._setting.property[name]);
+			if (propSetting.off) {
+				// off指定されていれば何もしない
+				return;
+			}
+			if (type === 'blur') {
+				// blurの時はメッセージを非表示にして、終了
+				this._removeMessage(name);
+				return;
+			}
+			if ($.inArray(name, validationResult.validatingProperties) !== -1) {
+				// まだvalidate結果が返ってきていない場合
+				// メッセージを削除
+				this._removeMessage(name);
+				validationResult.addEventListener('validate', this.own(function(ev) {
+					if (ev.name === name && !ev.isValid
+							&& (type !== 'focus' || document.activeElement === element)) {
+						// nameの結果が返ってきた時にメッセージを表示
+						// focus時のvalidateなら、まだfocusが当たっているときだけ表示
+						this._setMessage(element, name, validationResult, type);
+					}
+				}));
+				return;
+			}
+
+			// 既存のエラーメッセージを削除
+			this._removeMessage(name);
+
+			var appendMessage = propSetting.appendMessage;
+			var replaceElement = propSetting.replaceElement;
+			var target = isFunction(replaceElement) ? replaceElement(element)
+					: (replaceElement || element);
+
+			var $errorMsg = this._messageElementMap[name];
+			if (!$errorMsg) {
+				// TODO タグやクラスを設定できるようにする
+				$errorMsg = $('<span class="message">');
+				this._messageElementMap[name] = $errorMsg;
+			}
+			$errorMsg.html(this._messageOutputController.getMessageByValidationResult(
+					validationResult, name));
+			if (appendMessage) {
+				appendMessage($errorMsg[0], target, name);
+			} else if (target) {
+				// elementの後ろに追加するのがデフォルト動作
+				// replaceElementで対象が変更されていればその後ろ
+				$(target).after($errorMsg);
+			}
+		},
+
+		_removeMessage: function(name) {
+			this._messageElementMap[name] && this._messageElementMap[name].remove();
+		},
+
+		/**
+		 * メッセージ出力コントローラの設定
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.Message
+		 */
+		_setChildSetting: function() {
+			var setting = this._setting;
+
+			// 各プロパティ毎のメッセージ設定をする
+			var property = setting.property;
+			var messageSetting = {};
+			for ( var p in property) {
+				messageSetting[p] = {
+					displayName: property[p].displayName || setting.displayName,
+					message: property[p].message || setting.message,
+					formatter: property[p].formatter || setting.formatter,
+				};
+			}
+			this._messageOutputController.addMessageSetting(messageSetting);
+		}
+	};
+	h5.core.expose(controller);
+})();
+
+(function() {
+	/**
+	 * 非同期validate中の項目にインジケータを出すプラグイン
+	 * <p>
+	 * プラグインの設定方法は、{@link h5.ui.FormController.setSetting}をご覧ください。
+	 * </p>
+	 *
+	 * @class
+	 * @name h5.ui.validation.AsyncIndicator
+	 */
+	var controller = {
+		__name: 'h5.ui.validation.AsyncIndicator',
+		_indicators: {},
+
+		/**
+		 * プラグイン設定を行う
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.AsyncIndicator
+		 * @param {Object} setting asyncIndicatorプラグイン設定オブジェクト
+		 */
+		_setSetting: function(setting) {
+			this._setting = setting;
+		},
+
+		/**
+		 * バリデート時に呼ばれる
+		 * <p>
+		 * 非同期バリデートがある場合、該当要素に対してインジケータを表示する
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.AsyncIndicator
+		 * @param {ValidationResult}
+		 */
+		_onValidate: function(result) {
+			var validatingProperties = result.validatingProperties;
+			var properties = result.properties;
+			for (var i = 0, l = properties.length; i < l; i++) {
+				var name = properties[i];
+				if ($.inArray(name, valdatingProperties)) {
+					var element = this.parentController._getElementByName(name);
+					this._showIndicator(element, name, validatingProperties[i]);
+				} else {
+					this._hideIndicator(name);
+				}
+			}
+		},
+
+		/**
+		 * 要素にフォーカスされた時に呼ばれる
+		 * <p>
+		 * 非同期バリデートがある場合、該当要素に対してインジケータを表示する
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.AsyncIndicator
+		 * @param element
+		 * @param name
+		 * @param {ValidationResult} validationResult
+		 */
+		_onFocus: function(element, name, validationResult) {
+			var validatingProperties = result.validatingProperties;
+			if ($.inArray(name, validatingProperties)) {
+				var element = this.parentController._getElementByName(name);
+				this._showIndicator(element, name, validatingProperties[i]);
+			} else {
+				this._hideIndicator(name);
+			}
+		},
+		//		_onBlur: function(element, name, validationResult) {
+		//			this._showIndicator(element, name, validationResult);
+		//		},
+		// FIXME どのタイミングで実行するかは設定で決める？
+		//		_onChange: function(element, name, validationResult) {
+		//			this._showIndicator(element, name, validationResult);
+		//		},
+
+		/**
+		 * 要素でキーアップされた時に呼ばれる
+		 * <p>
+		 * 非同期バリデートがある場合、該当要素に対してインジケータを表示する
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.AsyncIndicator
+		 * @param element
+		 * @param name
+		 * @param {ValidationResult} validationResult
+		 */
+		_onKeyup: function(element, name, validationResult) {
+			if ($.inArray(name, validationResult.validatingProperties) !== -1) {
+				// バリデート中ならインジケータ表示
+				this._showIndicator(element, name, validationResult);
+			}
+		},
+		//		_onClick: function(element, name, validationResult) {
+		//			this._setMessage(element, name, validationResult);
+		//		},
+
+		/**
+		 * プラグインのリセット
+		 * <p>
+		 * 表示されているインジケータを削除します
+		 * </p>
+		 *
+		 * @memberOf h5.ui.validation.AsyncIndicator
+		 */
+		reset: function() {
+			for ( var name in this._indicators) {
+				this._hideIndicator(name);
+			}
+			this._executedOnValidate = false;
+		},
+
+		/**
+		 * インジケータの表示
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.AsyncIndicator
+		 * @param {ValidationResult} validationResult
+		 * @param name
+		 */
+		_showIndicator: function(element, name, validationResult) {
+			// 共通設定とプロパティ毎の設定をマージ
+			var propSetting = $.extend({}, this._setting, this._setting.property
+					&& this._setting.property[name]);
+			if (propSetting.off) {
+				// off指定されていれば何もしない
+				return;
+			}
+			var replaceElement = propSetting.replaceElement;
+			var target = isFunction(replaceElement) ? replaceElement(element)
+					: (replaceElement || element);
+			if (!target) {
+				return;
+			}
+
+			// 既にある場合は再利用
+			this._indicators[name] = this._indicators[name] || h5.ui.indicator({
+				target: target,
+				block: false
+			});
+			this._indicators[name].show();
+			validationResult.addEventListener('validate', this.own(function(ev) {
+				if (name === ev.name) {
+					this._hideIndicator(ev.name);
+				}
+			}));
+			validationResult.addEventListener('abort', this.own(function(ev) {
+				this._hideIndicator(name);
+			}));
+		},
+
+		/**
+		 * インジケータの非表示
+		 *
+		 * @private
+		 * @memberOf h5.ui.validation.AsyncIndicator
+		 * @param name
+		 */
+		_hideIndicator: function(name) {
+			if (this._indicators[name]) {
+				this._indicators[name].hide();
+			}
+		}
+	};
+	h5.core.expose(controller);
+})();
+
+(function() {
+	// ログメッセージ
+	var FW_LOG_NOT_DEFINED_PLUGIN_NAME = 'プラグイン"{0}"は存在しません';
+	var FW_LOG_ALREADY_ADDED = 'プラグイン"{0}"は登録済みです。';
+
+	// TODO formのvalidatorで不要な項目は要らない
+	var DATA_RULE_REQUIRED = 'required';
+	var DATA_RULE_ASSERT_FALSE = 'assertFalse';
+	var DATA_RULE_ASSERT_TRUE = 'assertTrue';
+	var DATA_RULE_NULL = 'nul';
+	var DATA_RULE_NOT_NULL = 'notNull';
+	var DATA_RULE_MAX = 'max';
+	var DATA_RULE_MIN = 'min';
+	var DATA_RULE_FUTURE = 'future';
+	var DATA_RULE_PAST = 'past';
+	var DATA_RULE_PATTERN = 'pattern';
+	var DATA_RULE_SIZE = 'size';
+
+	// フォームコントロールグループコンテナの名前指定
+	var DATA_INPUTGROUP_CONTAINER = 'h5-input-group-container';
+
+	// プラグインに通知するイベント
+	var PLUGIN_EVENT_VALIDATE = '_onValidate';
+	var PLUGIN_EVENT_FOCUS = '_onFocus';
+	var PLUGIN_EVENT_BLUR = '_onBlur';
+	var PLUGIN_EVENT_CHANGE = '_onChange';
+	var PLUGIN_EVENT_KEYUP = '_onKeyup';
+	var PLUGIN_EVENT_CLICK = '_onClick';
+
+	// デフォルトで用意しているプラグイン名とプラグイン(コントローラ定義)のマップ
+	var DEFAULT_PLUGINS = {
+		style: h5.ui.validation.Style,
+		composition: h5.ui.validation.Composition,
+		baloon: h5.ui.validation.ErrorBaloon,
+		bsBaloon: h5.ui.validation.BootstrapErrorBaloon,
+		message: h5.ui.validation.Message,
+		asyncIndicator: h5.ui.validation.AsyncIndicator
+	};
+
+	// プラグインの表示リセットメui.validation.BootstrapErrorBaloonソッド名
+	var PLUGIN_METHOD_RESET = 'reset';
+
+	// デフォルトで用意しているvalidateルール生成関数
+	var defaultRuleCreators = {
+		requiredRuleCreator: function(inputElement) {
+			if ($(inputElement).data(DATA_RULE_REQUIRED) != null) {
+				return true;
+			}
+		},
+		assertFalseRuleCreator: function(inputElement) {
+			if ($(inputElement).data(DATA_RULE_ASSERT_FALSE) != null) {
+				return true;
+			}
+		},
+		assertTrueRuleCreator: function(inputElement) {
+			if ($(inputElement).data(DATA_RULE_ASSERT_TRUE) != null) {
+				return true;
+			}
+		},
+		nulRuleCreator: function(inputElement) {
+			if ($(inputElement).data(DATA_RULE_NULL) != null) {
+				return true;
+			}
+		},
+		notNullRuleCreator: function(inputElement) {
+			if ($(inputElement).data(DATA_RULE_NOT_NULL) != null) {
+				return true;
+			}
+		},
+		maxRuleCreator: function(inputElement) {
+			var data = $(inputElement).data(DATA_RULE_MAX);
+			if (data != null) {
+				if (typeof data === 'number') {
+					return data;
+				}
+				if (isArray(data)) {
+					return [parseFloat(data[0]), $.trim(data[1]) === 'true'];
+				}
+				return parseFloat(data);
+			}
+		},
+		minRuleCreator: function(inputElement) {
+			var data = $(inputElement).data(DATA_RULE_MIN);
+			if (data != null) {
+				if (typeof data === 'number') {
+					return data;
+				}
+				if (isArray(data)) {
+					return [parseFloat(data[0]), $.trim(data[1]) === 'true'];
+				}
+				return parseFloat(data);
+			}
+		},
+		futureRuleCreator: function(inputElement) {
+			var data = $(inputElement).data(DATA_RULE_FUTURE);
+			if (data != null) {
+				return new Date(data);
+			}
+		},
+		pastRuleCreator: function(inputElement) {
+			var data = $(inputElement).data(DATA_RULE_PAST);
+			if (data != null) {
+				return new Date(data);
+			}
+		},
+		digitsRuleCreator: function(inputElement) {
+			var data = $(inputElement).data(DATA_RULE_PAST);
+			if (data != null) {
+				if (isArray(data)) {
+					for (var i = 0, l = data.length; i < l; i++) {
+						data[i] = parseInt(data[i]);
+					}
+					return data;
+				}
+				return parseInt(data);
+			}
+		},
+		patternRuleCreator: function(inputElement) {
+			var data = $(inputElement).data(DATA_RULE_PATTERN);
+			if (data != null) {
+				return new RegExp(data);
+			}
+		},
+		sizeRuleCreator: function(inputElement) {
+			var data = $(inputElement).data(DATA_RULE_SIZE);
+			if (data != null) {
+				if (isArray(data)) {
+					for (var i = 0, l = data.length; i < l; i++) {
+						data[i] = parseInt(data[i]);
+					}
+					return data;
+				}
+				return parseInt(data);
+			}
+		}
+	};
+
+
+	/**
+	 * フォーム要素のバリデートを行うコントローラ
+	 *
+	 * @class
+	 * @name h5.ui.FormController
+	 */
+	var controller = {
+		__name: 'h5.ui.FormController',
+		_config: {},
+		_bindedForm: null,
+		_ruleCreators: [],
+		_plugins: [],
+
+		/**
+		 * フォームバリデーションロジック
+		 *
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 */
+		_validationLogic: h5.validation.FormValidationLogic,
+
+		/**
+		 * nameをキーに非同期バリデート結果を待つValidationResultを持つマップ
+		 * <p>
+		 * 待機中のバリデート結果を保持することで、同じプロパティに対して続けてバリデートが掛けられたときに待機中のものを中断して新しい結果を待つようにしている。
+		 * </p>
+		 *
+		 * @memberOf h5.ui.FormController
+		 * @private
+		 */
+		_waitingValidationResultMap: {},
+
+		/**
+		 * 全体のvalidateを行ったときのvalidationResult
+		 *
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 */
+		_waitingAllValidationResult: null,
+
+		/**
+		 * フォームコントローラの設定
+		 * <p>
+		 * {@link h5.ui.FormController.setSetting}で設定した設定オブジェクト
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 */
+		_setting: {},
+
+		/**
+		 * 各プラグインの設定
+		 * <p>
+		 * {@link h5.ui.FormController.setSetting}で設定した設定オブジェクトから、各プラグイン毎の設定を抜き出してプラグイン名でマップ化したもの
+		 * </p>
+		 * <p>
+		 * プラグインを有効にする前に設定されたものも覚えて置き、有効化された時にそのプラグインの設定を使用する。
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 */
+		_pluginSetting: {},
+
+		/**
+		 * フォームコントローラの設定を行う
+		 * <p>
+		 * 第1引数にフォームコントローラの設定及び各プラグインの設定を行うオブジェクトを指定します。
+		 * </p>
+		 * <p>
+		 * 各プラグインの機能及びプラグイン名については、{@link h5.ui.FormController.addOutput}をご覧ください。
+		 * </p>
+		 * <p>
+		 * 指定する設定オブジェクトには各プラグイン毎の設定と、各プロパティ毎の設定を記述します。
+		 * </p>
+		 * <p>
+		 *
+		 * <pre class="sh_javascript"><code>
+		 * {
+		 * 	output: { // 各プラグイン毎の設定
+		 * 		baloon: { // キー名にプラグイン名
+		 * 			placement: 'top' // 設定プロパティと値を記述
+		 * 		},
+		 * 		message: {...},
+		 * 		...
+		 * 	},
+		 * 	property: { // 各プロパティ毎の設定
+		 * 		name: { // キー名にプロパティ名
+		 * 			displayName: '名前', // 設定プロパティと値を記述
+		 * 			message: '必須です', // 設定プロパティと値を記述
+		 * 			output: { // 各プロパティについて各プラグイン固有の設定
+		 * 				baloon: {
+		 * 					placement: 'left' // 設定プロパティと値を記述
+		 * 				},
+		 * 				message: {
+		 * 					message: '登録には{displayName}が必要です'  // 設定プロパティと値を記述
+		 * 				}
+		 * 			}
+		 * 		}
+		 * 	}
+		 * }
+		 * </code></pre>
+		 *
+		 * <p>
+		 * 設定プロパティは
+		 * <ul>
+		 * <li>フォームコントローラで使用するもの
+		 * <li>各プラグインで使用するもの
+		 * <ul>
+		 * <li>プラグイン共通のもの
+		 * <li>プラグイン固有のもの
+		 * </ul>
+		 * </ul>
+		 * があります。
+		 * </p>
+		 * <h4>フォームコントローラで使用するもの</h4>
+		 * <table class="params"><thead>
+		 * <tr>
+		 * <th>設定プロパティ名</th>
+		 * <th>型</th>
+		 * <th>説明</th>
+		 * <th>デフォルト値</th>
+		 * </tr>
+		 * </thead><tbody>
+		 * <tr>
+		 * <th>isArray</th>
+		 * <td>boolean</td>
+		 * <td>あるプロパティについて、値を必ず配列で取ってくる場合はtrueを設定します。isArrayを指定しない場合、name属性値が同じフォーム入力要素が複数あると値が配列になったりならなかったりする場合があります。
+		 * 例えば、name属性が同じcheckboxが複数チェックされている場合配列になりますが、1つしかチェックされていない場合は文字列になります。
+		 * どんな場合でも必ず配列で取得したい場合は、isArrayにtrueを設定してください。</td>
+		 * <td>false</td>
+		 * </tr>
+		 * <tr>
+		 * <th>srcElement</th>
+		 * <td>DOM|jQuery|string</td>
+		 * <td>あるプロパティについて対応する要素を指定します。この指定はフォーム部品ではなくただのdiv等を入力要素としてvalueFuncで値を取ってくるような場合に、エラー出力プラグインが対応する要素を取得するために指定します。</td>
+		 * <td>あるプロパティについて対応するフォーム入力部品要素</td>
+		 * </tr>
+		 * <tr>
+		 * <th>valueFunc</th>
+		 * <td>function</td>
+		 * <td>あるプロパティについて値を取得する関数を指定します。この指定はフォーム部品ではなくただのdiv等を入力要素としたような場合に、値を取得するための関数を設定します。第1引数にはFormControllerのルートエレメント、第1引数にはプロパティ名が渡されます。値を返す関数を設定してください。</td>
+		 * <td>なし</td>
+		 * </tr>
+		 * </tbody></table>
+		 * <h4>全プラグイン共通</h4>
+		 * <table class="params"><thead>
+		 * <tr>
+		 * <th>設定プロパティ名</th>
+		 * <th>型</th>
+		 * <th>説明</th>
+		 * <th>デフォルト値</th>
+		 * </tr>
+		 * </thead><tbody>
+		 * <tr>
+		 * <th>off</th>
+		 * <td>boolean</td>
+		 * <td>プラグイン無効設定。無効にする場合はtrueを指定。</td>
+		 * <td>false</td>
+		 * </tr>
+		 * </tbody></table>
+		 * <h4>メッセージを表示するプラグイン(message, composition, baloonで共通)</h4>
+		 * <table class="params"><thead>
+		 * <tr>
+		 * <th>設定プロパティ名</th>
+		 * <th>型</th>
+		 * <th>説明</th>
+		 * <th>デフォルト値</th>
+		 * </tr>
+		 * </thead><tbody>
+		 * <tr>
+		 * <th>displayName</th>
+		 * <td>string</td>
+		 * <td>バリデーション対象のプロパティに対応する表示名</td>
+		 * <td>バリデーション対象のプロパティ名。メッセージ生成パラメータ(後述)で使用されます。</td>
+		 * </tr>
+		 * <tr>
+		 * <th>message</th>
+		 * <td>string|function</td>
+		 * <td>
+		 * <p>
+		 * バリデートエラー時に表示するメッセージ文字列。またはメッセージ生成関数。
+		 * </p>
+		 * <p>
+		 * 文字列で指定する場合はプレースホルダの記述ができます。プレースホルダの場合に適用されるオブジェクト、
+		 * 及び関数指定の場合に第1引数に渡されるパラメータ(メッセージ生成パラメータ)は共通で、以下の通りです。
+		 * </p>
+		 *
+		 * <pre class="javascript_sh"><code>
+		 * {
+		 *     name: 'userid', // プロパティ名
+		 *     value: 'ab',     // 値
+		 *     displayName: 'ユーザーID', // 設定した表示名。未設定の場合はプロパティ名が入ります。
+		 *     violation: [{
+		 *       ruleName: 'min',
+		 *       ruleValue: {value: 4, inclusive:true},
+		 *       reason: (object)  //そのルールが非同期の場合。同期の場合は常にnull
+		 *     }, ... ]
+		 * }
+		 * </code></pre>
+		 *
+		 * </td>
+		 * <td>デフォルトルール毎にデフォルトのメッセージが用意されており、それらが使用されます。</td>
+		 * </tr>
+		 * </tbody></table>
+		 * <h4>フォーム入力要素基準でエラー表示を行うプラグイン(style,message,baloon,asyncIndicatorで共通)</h4>
+		 * <table class="params"><thead>
+		 * <tr>
+		 * <th>設定プロパティ名</th>
+		 * <th>型</th>
+		 * <th>説明</th>
+		 * <th>デフォルト値</th>
+		 * </tr>
+		 * </thead><tbody>
+		 * <tr>
+		 * <th>replaceElement</th>
+		 * <td>DOM|jQuery|string|function</td>
+		 * <td>クラス適用対象要素をDOM,jQuery,セレクタの何れかで指定。関数を設定した場合は第1引数にデフォルトは各プロパティのフォーム部品要素が渡され、その関数が返す要素が対象要素になります。</td>
+		 * <td>各プロパティのフォーム入力部品要素</td>
+		 * </tr>
+		 * </tbody></table>
+		 * <p>
+		 * 各プラグイン固有の設定項目については、各プラグインのJSDocを参照してください。
+		 * </p>
+		 * <ul>
+		 * <li>{@link h5.ui.validation.AsyncIndicator}
+		 * <li>{@link h5.ui.validation.Composition}
+		 * <li>{@link h5.ui.validation.Message}
+		 * <li>{@link h5.ui.validation.BootstrapErrorBaloon}
+		 * <li>{@link h5.ui.validation.ErrorBaloon}
+		 * <ul>
+		 *
+		 * @memberOf h5.ui.FormController
+		 * @param {Object} setting 設定オブジェクト
+		 */
+		setSetting: function(setting) {
+			this._setting = setting;
+			// 現在有効なプラグインの設定を取り出して設定する
+			var currentPlugins = this._plugins;
+			for ( var pluginName in currentPlugins) {
+				var plugin = currentPlugins[pluginName];
+				plugin._setSetting && plugin._setSetting(this._margePluginSettings(pluginName));
+			}
+		},
+
+		/**
+		 * 設定オブジェクトから指定されたプラグインの設定だけ取り出す
+		 *
+		 * @private
+		 * @param pluginName
+		 */
+		_margePluginSettings: function(pluginName) {
+			this._pluginSetting;
+			var setting = this._setting;
+			var outputSetting = setting.output;
+			var propertySetting = setting.property;
+			var pluginSetting = $.extend({}, outputSetting && outputSetting[pluginName]);
+			pluginSetting.property = {};
+			for ( var prop in propertySetting) {
+				var propSetting = $.extend({}, propertySetting[prop]);
+				$.extend(propSetting, propSetting[pluginName]);
+				var propertyPluginOutput = h5.u.obj.getByPath('output.' + pluginName, propSetting);
+				delete propSetting['output'];
+				pluginSetting.property[prop] = $.extend({}, propSetting, propertyPluginOutput)
+			}
+			return pluginSetting;
+		},
+
+		/**
+		 * @memberOf h5.ui.FormController
+		 * @private
+		 */
+		__construct: function() {
+			// デフォルトルールの追加
+			// TODO formのvalidatorで不要な項目は要らない
+			this._addRuleCreator(DATA_RULE_REQUIRED, defaultRuleCreators.requiredRuleCreator);
+			this
+					._addRuleCreator(DATA_RULE_ASSERT_FALSE,
+							defaultRuleCreators.assertFalseRuleCreator);
+			this._addRuleCreator(DATA_RULE_ASSERT_TRUE, defaultRuleCreators.assertTrueRuleCreator);
+			this._addRuleCreator(DATA_RULE_NULL, defaultRuleCreators.nulRuleCreator);
+			this._addRuleCreator(DATA_RULE_NOT_NULL, defaultRuleCreators.notNullRuleCreator);
+			this._addRuleCreator(DATA_RULE_MAX, defaultRuleCreators.maxRuleCreator);
+			this._addRuleCreator(DATA_RULE_MIN, defaultRuleCreators.minRuleCreator);
+			this._addRuleCreator(DATA_RULE_FUTURE, defaultRuleCreators.futureRuleCreator);
+			this._addRuleCreator(DATA_RULE_PAST, defaultRuleCreators.pastRuleCreator);
+			this._addRuleCreator(DATA_RULE_PATTERN, defaultRuleCreators.patternRuleCreator);
+			this._addRuleCreator(DATA_RULE_SIZE, defaultRuleCreators.sizeRuleCreator);
+		},
+
+		/**
+		 * @memberOf h5.ui.FormController
+		 * @private
+		 */
+		__init: function() {
+			// form要素にバインドされていればそのformに属しているform関連要素を見る
+			// すなわち、ルートエレメント以下にあるinputでもform属性で別IDが指定されていたらそのinputは対象外
+			// また、ルートエレメント外にあるinputでも、form属性がルートエレメントのformを指定していれば対象とする
+			if (this.rootElement.tagName.toUpperCase() === 'FORM') {
+				this._bindedForm = this.rootElement;
+				// HTML5のformによる標準のバリデーションは行わないようにする
+				$(this._bindedForm).prop('novalidate', true);
+			}
+			// フォーム部品からルールを生成
+			var $formControls = $(this._getElements());
+			var validateRule = {};
+			$formControls.each(this.ownWithOrg(function(element) {
+				var name = element.getAttribute('name');
+				// 名前なしは何もしない
+				if (name == null) {
+					return;
+				}
+				var ruleOfProp = {};
+				validateRule[name] = ruleOfProp;
+				for (var i = 0, l = this._ruleCreators.length; i < l; i++) {
+					var key = this._ruleCreators[i].key;
+					var func = this._ruleCreators[i].func;
+					var ret = func(element);
+					if (ret !== undefined) {
+						ruleOfProp[key] = ret;
+					}
+				}
+			}));
+			this.addRule(validateRule);
+
+			// submitイベントを拾ってvalidateが行われるようにする
+			if (this._bindedForm) {
+				this.on(this._bindedForm, 'submit', this._submitHandler);
+			}
+		},
+
+		/**
+		 * プラグインの有効化
+		 * <p>
+		 * フォームのバリデート時にバリデート結果を出力するプラグインを有効にします。以下のようなプラグインが用意されています。
+		 * </p>
+		 * <table><thead>
+		 * <tr>
+		 * <th>プラグイン名</tr>
+		 * <th>説明</th>
+		 * </thead><tbody>
+		 * <tr>
+		 * <td>composition</td>
+		 * <td>フォーム全体バリデート時にバリデート失敗した項目全てについて指定した箇所にメッセージを出力する</td>
+		 * </tr>
+		 * <tr>
+		 * <td>style</td>
+		 * <td>バリデート時にバリデート結果によって要素にクラスを適用する</td>
+		 * </tr>
+		 * <tr>
+		 * <td>message</td>
+		 * <td>バリデート時にバリデート失敗した項目についてメッセージを表示する</td>
+		 * </tr>
+		 * <tr>
+		 * <td>baloon</td>
+		 * <td>バリデート時にバリデート失敗した項目についてバルーンメッセージを表示する</td>
+		 * </tr>
+		 * <tr>
+		 * <td>asyncIndicator</td>
+		 * <td>非同期バリデート中の項目についてインジケータを表示する</td>
+		 * </tr>
+		 * </tbody></table>
+		 *
+		 * @memberOf h5.ui.FormController
+		 * @param {string|string[]} pluginNames プラグイン名またはその配列
+		 */
+		addOutput: function(pluginNames) {
+			// デフォルトの出力プラグイン追加
+			// __init前(rootElement決定前)ならルートエレメント決定後に実行
+			if (!this.isInit) {
+				this.initPromise.done(this.own(function() {
+					this.addOutput(pluginNames);
+				}));
+				return;
+			}
+			pluginNames = $.isArray(pluginNames) ? pluginNames : [pluginNames];
+			for (var i = 0, l = pluginNames.length; i < l; i++) {
+				var pluginName = pluginNames[i];
+				var plugin = DEFAULT_PLUGINS[pluginName];
+				if (!plugin) {
+					this.log.warn(FW_LOG_NOT_DEFINED_PLUGIN_NAME, pluginName);
+					continue;
+				}
+				this._addOutputPlugin(pluginName, plugin);
+			}
+		},
+
+		/**
+		 * ルールの追加
+		 * <p>
+		 * バリデートルールを追加する。第1引数にはルールオブジェクトを指定します。ルールオブジェクトについては{@link h5.validation.FormValidationLogic.addRule}と同じ形式で指定してください。
+		 * </p>
+		 *
+		 * @memberOf h5.ui.FormController
+		 * @param {Object} ruleObj ルールオブジェクト(オブジェクトの形式は{@link h5.validation.FormValidationLogic.addRule}参照)
+		 */
+		addRule: function(ruleObj) {
+			this._validationLogic.addRule(ruleObj);
+		},
+
+		/**
+		 * ルールの削除
+		 * <p>
+		 * 第1引数に指定されたプロパティについてのバリデートルールを削除します
+		 * </p>
+		 *
+		 * @memberOf h5.ui.FormController
+		 * @param {string|string[]} name プロパティ名またはその配列
+		 */
+		removeRule: function(name) {
+			this._validationLogic.removeRule();
+			this.validate(name);
+		},
+
+		/**
+		 * ルールの有効化
+		 * <p>
+		 * 第1引数に指定されたプロパティについてのバリデートを無効化します
+		 * </p>
+		 *
+		 * @memberOf h5.ui.FormController
+		 * @param {string|string[]} names プロパティ名またはその配列
+		 */
+		enableRule: function(names) {
+			this._validationLogic.enableRule(names);
+		},
+
+		/**
+		 * ルールの無効化
+		 * <p>
+		 * 第1引数に指定されたプロパティについてのバリデートを無効化します
+		 * </p>
+		 *
+		 * @memberOf h5.ui.FormController
+		 * @param {string|string[]} names プロパティ名またはその配列
+		 */
+		disableRule: function(names) {
+			this._validationLogic.disableRule(names);
+		},
+
+		/**
+		 * このコントローラが管理するフォーム内のフォーム部品の値を集約したオブジェクトを生成する
+		 * <p>
+		 * フォーム部品を集約し、各部品の名前(name属性値)をキーに、その値を持つオブジェクトを返します。
+		 * </p>
+		 * <p>
+		 * 第1引数にtargetNamesを指定した場合、指定した名前に当てはまるフォーム部品だけが集約対象になります。
+		 * </p>
+		 * <p>
+		 * 例えばname属性が"userid"のinputがあり、その値が"0001"である場合は、{userid: "0001"}のようなオブジェクトを返します。
+		 * </p>
+		 * <p>
+		 * また、グループ指定された要素の集約をすることができます。
+		 * </p>
+		 * <p>
+		 * グループとは、以下のように指定することができます
+		 * </p>
+		 *
+		 * <pre class="sh_html"><code>
+		 * &lt;!-- data-h5-input-group-containerにグループ名を指定。子要素がそのグループになる。 --&gt;
+		 * lt;div data-h5-input-group-container=&quot;birthday&quot;&gt;
+		 * 		&lt;displayName class=&quot;control-displayName&quot;&gt;生年月日&lt;/displayName&gt;
+		 * 		&lt;input name=&quot;year&quot; type=&quot;text&quot; placeholder=&quot;年&quot;&gt;
+		 * 		&lt;input name=&quot;month&quot; type=&quot;text&quot; placeholder=&quot;月&quot;&gt;
+		 * 		&lt;input name=&quot;day&quot; type=&quot;text&quot; placeholder=&quot;日&quot;&gt;
+		 * 		&lt;/div&gt;
+		 * </code></pre>
+		 *
+		 * <p>
+		 * 上記のような指定のされた要素は、グループ名をキーにグループに属する要素を集約したオブジェクトとして集約します。戻り値は以下のようになります。
+		 * </p>
+		 *
+		 * <pre class="sh_javascript"><code>
+		 * {
+		 * 	birthday: {
+		 * 		year: &quot;1999&quot;,
+		 * 		month: &quot;1&quot;,
+		 * 		month: &quot;2&quot;
+		 * 	},
+		 * 	zipcode: {
+		 * 		zip1: &quot;220&quot;,
+		 * 		zip2: &quot;0012&quot;
+		 * 	}
+		 * }
+		 * </code></pre>
+		 *
+		 * @memberOf h5.ui.FormController
+		 * @param {string|string[]} names 指定した場合、指定したnameのものだけを集約
+		 * @returns {Object} フォーム部品集約オブジェクト
+		 */
+		getValue: function(names) {
+			names = names && (!isArray(names) ? [names] : names);
+			var $elements = $(this._getElements());
+			var $groups = $(this._getInputGroupElements());
+			var propertySetting = this._setting && this._setting.property || {};
+			var ret = {};
+			var elementNames = [];
+			var rootElement = this.rootElement;
+			$elements.each(function() {
+				var name = this.name;
+				elementNames.push(name);
+				var currentGroup = ret;
+				// グループに属していればグループ名を取得
+				if ($groups.find(this).length) {
+					var $group = $(this).closest('[data-' + DATA_INPUTGROUP_CONTAINER + ']');
+					var groupName = $group.data(DATA_INPUTGROUP_CONTAINER);
+				}
+				if (groupName) {
+					elementNames.push(groupName);
+					// グループコンテナに属するエレメントの場合
+					if (names && $.inArray(name, names) === -1
+							&& $.inArray(groupName, names) === -1) {
+						// nameもgroupNameもnamesに入っていなければ集約対象外
+						return;
+					}
+					// グループ単位でオブジェクトを作る
+					ret[groupName] = ret[groupName] || {};
+					currentGroup = ret[groupName];
+				} else if (names && $.inArray(name, names) === -1) {
+					// グループに属さないエレメントの場合
+					// namesに含まれないnameのエレメントは集約対象外
+					return;
+				}
+				if (this.type === 'file') {
+					// ファイルオブジェクトを覚えておく
+					var files = this.files;
+					var filesLength = files.length;
+					if (!filesLength) {
+						return;
+					}
+					currentGroup[name] = currentGroup[name] || [];
+					for (var i = 0; i < filesLength; i++) {
+						currentGroup[name].push(files[i]);
+					}
+					return;
+				}
+				if (!name || (this.type === 'radio' || this.type === 'checkbox')
+						&& this.checked === false) {
+					return;
+				}
+				var valueFunc = propertySetting[name] && propertySetting[name].valueFunc;
+				var value = valueFunc ? valueFunc(rootElement, name) : $(this).val();
+				if (valueFunc && value === undefined || value == null) {
+					// valueFuncがundefinedを返した場合またはvalueがnullだった場合はそのプロパティは含めない
+					return;
+				}
+				if (propertySetting[name] && !!propertySetting[name].isArray) {
+					// isArray:trueが指定されていたら必ず配列
+					value = wrapInArray(value);
+				}
+				if (currentGroup[name] !== undefined) {
+					if (!$.isArray(currentGroup[name])) {
+						currentGroup[name] = [currentGroup[name]];
+					}
+					if ($.isArray(value)) {
+						// select multipleの場合は値は配列
+						Array.prototype.push.apply(currentGroup[name], value);
+					} else {
+						currentGroup[name].push(value);
+					}
+				} else {
+					currentGroup[name] = value;
+				}
+			});
+
+			// セッティングに記述されているがinput要素の集約で集められないプロパティを追加
+			var otherProperties = [];
+			for ( var p in propertySetting) {
+				if ((!names || $.inArray(p, names) !== -1) && $.inArray(p, elementNames) === -1) {
+					var valueFunc = propertySetting[p] && propertySetting[p].valueFunc;
+					var val = valueFunc && valueFunc(rootElement, p);
+					if (val !== undefined) {
+						ret[p] = val;
+					}
+				}
+			}
+
+			return ret;
+		},
+
+		/**
+		 * このコントローラが管理するフォームに対して、値を集約したオブジェクトから値をセットする
+		 * <p>
+		 * 各フォーム部品の名前と値を集約したオブジェクトを引数に取り、その値を各フォーム部品にセットします。
+		 * </p>
+		 *
+		 * @memberOf h5.ui.FormController
+		 * @param {Object} obj フォーム部品の値を集約したオブジェクト
+		 */
+		setValue: function(obj) {
+			var $elements = $(this._getElements());
+			var indexMap = {};
+			// グループ指定でプロパティが入れ子であるオブジェクトの場合、展開する
+			var flatObj = {};
+			for ( var p in obj) {
+				if ($.isPlainObject(obj[p])) {
+					for ( var prop in obj[p]) {
+						flatObj[prop] = obj[p][prop];
+					}
+				} else {
+					flatObj[p] = obj[p];
+				}
+			}
+			obj = flatObj;
+			$elements.each(function() {
+				var name = this.name;
+				if (!name) {
+					return;
+				}
+				var value = obj[name];
+				// radio, checkboxの場合
+				if ((this.type === 'radio' || this.type === 'checkbox')) {
+					if ($.isArray(value)) {
+						indexMap[name] = indexMap[name] ? indexMap[name] + 1 : 0;
+						value = value[indexMap[name]];
+					}
+					// 値が一致するならチェック
+					$(this).prop('checked', $(this).val() === value);
+					return;
+				}
+				// select multipleの場合
+				if ($(this).is('select[multiple]')) {
+					$(this).val([]);
+					if ($.isArray(value)) {
+						indexMap[name] = indexMap[name] || 0;
+						value = value.slice(indexMap[name]);
+					}
+					if (value == null) {
+						return;
+					}
+					var arrayValue = [];
+					for (var i = 0, l = value.length; i < l; i++) {
+						arrayValue.push(value[i]);
+						$(this).val(arrayValue);
+						indexMap[name]++;
+						var after = $(this).val();
+						after = $.isArray(after) ? after : [after];
+						if (after.length < arrayValue.length) {
+							indexMap[name]--;
+							break;
+						}
+					}
+					return;
+				}
+				// その他
+				if ($.isArray(value)) {
+					indexMap[name] = indexMap[name] || 0;
+					value = value[indexMap[name]++];
+				}
+				$(this).val(value);
+			});
+		},
+
+		/**
+		 * フォーム部品の値をすべてクリアする
+		 *
+		 * @memberOf h5.ui.FormController
+		 */
+		clearValue: function() {
+			$(this._getElements()).each(function() {
+				if (this.type === 'radio' || this.type === 'checkbox') {
+					$(this).prop('checked', false);
+					return;
+				}
+				$(this).val(null);
+			});
+		},
+
+		/**
+		 * フォーム部品の値をすべてリセットする
+		 *
+		 * @memberOf h5.ui.FromController
+		 */
+		resetValue: function() {
+			if (this._bindedForm) {
+				this._bindedForm.reset();
+			}
+		},
+
+		/**
+		 * 各プラグインが出力しているバリデート結果表示をすべてリセットする
+		 *
+		 * @memberOf h5.ui.FormController
+		 */
+		resetValidation: function() {
+			//			this._waitingAllValidationResult && this._waitingAllValidationResult.abort();
+			//			for ( var p in this._waitingValidationResultMap) {
+			//				this._waitingValidationResultMap[p].abort();
+			//			}
+			this._waitingValidationResultMap = {};
+			var plugins = this._plugins;
+			for ( var pluginName in plugins) {
+				this._resetPlugin(pluginName, plugins[pluginName]);
+			}
+		},
+
+		/**
+		 * フォームに入力された値のバリデートを行う
+		 * <p>
+		 * 第1引数にプロパティ名またはその配列を指定した場合、指定されたプロパティ名のみをバリデート対象にします。省略した場合は全てが対象になります。
+		 * </p>
+		 *
+		 * @memberOf h5.ui.FormController
+		 * @param {string|string[]} names バリデート対象のプロパティ名またはプロパティ名の配列
+		 * @returns {ValidationResult}
+		 */
+		validate: function(names) {
+			// バリデート実行
+			var result = this._validate(names);
+
+			// _onValidateの呼び出し
+			this._callPluginValidateEvent(PLUGIN_EVENT_VALIDATE, result);
+			return result;
+		},
+
+		/**
+		 * プラグイン名からプラグインインスタンスを取得
+		 *
+		 * @memberOf h5.ui.FormController
+		 * @param {string} pluginName プラグイン名
+		 * @returns {Controller}
+		 */
+		getOutput: function(pluginName) {
+			return this._plugins[pluginName];
+		},
+
+		/*
+		 * フォーム部品でのイベント発生時にプラグインを呼び出すイベントハンドラ設定
+		 */
+		'{rootElement} focusin': function(ctx) {
+			this._pluginElementEventHandler(ctx, PLUGIN_EVENT_FOCUS);
+		},
+
+		'{rootElement} focusout': function(ctx) {
+			this._pluginElementEventHandler(ctx, PLUGIN_EVENT_BLUR);
+		},
+
+		'{rootElement} keyup': function(ctx) {
+			this._pluginElementEventHandler(ctx, PLUGIN_EVENT_KEYUP);
+		},
+
+		'{rootElement} change': function(ctx) {
+			this._pluginElementEventHandler(ctx, PLUGIN_EVENT_CHANGE);
+		},
+
+		'{rootElement} click': function(ctx) {
+			this._pluginElementEventHandler(ctx, PLUGIN_EVENT_CLICK);
+		},
+
+		/**
+		 * このコントローラが管理するフォームに属するフォーム部品またはフォーム部品グループ要素の中で指定した名前に一致する要素を取得
+		 *
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 * @param {string} name
+		 * @returns {DOM}
+		 */
+		_getElementByName: function(name) {
+			// このメソッドはプラグインがvalidate結果から対応するエレメントを探す時に呼び出される
+			var srcElement = this._setting.property && this._setting.property[name]
+					&& this._setting.property[name].srcElement;
+			if (srcElement) {
+				return srcElement;
+			}
+			var $formCtrls = $(this._getElements());
+			var element = $formCtrls.filter('[name="' + name + '"]')[0];
+			if (element) {
+				return element;
+			}
+			var groupContainer = $(this._getInputGroupElements()).filter(
+					'[data-' + DATA_INPUTGROUP_CONTAINER + '="' + name + '"]')[0];
+			if (groupContainer) {
+				return groupContainer;
+			}
+			return null;
+		},
+
+		/**
+		 * このコントローラが管理するフォームに属するフォーム部品全てを取得
+		 *
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 * @returns {DOM[]}
+		 */
+		_getElements: function() {
+			var $innerFormControls = this.$find('input,select,textarea').not(
+					'[type="submit"],[type="reset"],[type="image"]');
+			if (!this._bindedForm) {
+				return $innerFormControls;
+			}
+
+			var formId = $(this._bindedForm).attr('id');
+			// ブラウザがform属性に対応しているかどうかに関わらず、
+			// HTML5の仕様に従ってformに属するフォームコントロール部品を列挙する
+			var $formControls = $('input,select,textarea').not(
+					'[type="submit"],[type="reset"],[type="image"]');
+			return $formControls.filter(
+					function() {
+						var $this = $(this);
+						var formAttr = $this.attr('form');
+						// form属性がこのコントローラのフォームを指している
+						// または、このコントローラのフォーム内の要素でかつform属性指定無し
+						return (formAttr && formAttr === formId) || !formAttr
+								&& $innerFormControls.index($this) !== -1;
+					}).toArray();
+		},
+
+		/**
+		 * このコントローラが管理するフォームに属するグループコンテナ要素(data-group-containerが指定されている要素)を取得
+		 *
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 * @returns {DOM[]}
+		 */
+		_getInputGroupElements: function() {
+			var $allGroups = $('[data-' + DATA_INPUTGROUP_CONTAINER + ']');
+			return this.$find('[data-' + DATA_INPUTGROUP_CONTAINER + ']').filter(
+					function() {
+						var $this = $(this);
+						var formAttr = $this.attr('form');
+						// form属性がこのコントローラのフォームを指している
+						// または、このコントローラのフォーム内の要素でかつform属性指定無し
+						return (formAttr && formAttr === formId) || !formAttr
+								&& $allGroups.index($this) !== -1;
+					}).toArray();
+		},
+
+		/**
+		 * バリデートルール生成関数の登録
+		 *
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 * @param key
+		 * @param func
+		 */
+		_addRuleCreator: function(key, func) {
+			this._ruleCreators.push({
+				key: key,
+				func: func
+			});
+		},
+
+		/**
+		 * プラグインのリセット
+		 *
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 * @param {string} pluginName
+		 * @param {Controller} plugins
+		 */
+		_resetPlugin: function(pluginName, plugin) {
+			if (!plugin[PLUGIN_METHOD_RESET]) {
+				return;
+			}
+			plugin[PLUGIN_METHOD_RESET].call(plugin);
+		},
+
+		/**
+		 * プラグインの追加(1.2.0では非公開)
+		 *
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 * @param pluginName
+		 * @param controller
+		 */
+		_addOutputPlugin: function(pluginName, controller) {
+			if (this._plugins[pluginName]) {
+				this.log.warn(FW_LOG_ALREADY_ADDED, pluginName);
+				return;
+			}
+			var c = h5.core.controller(this._bindedForm || this.rootElement, controller);
+			c._setSetting && c._setSetting(this._margePluginSettings(pluginName));
+			this.manageChild(c);
+			this._plugins[pluginName] = c;
+		},
+
+		/**
+		 * フォームのバリデートを行う
+		 *
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 * @param names
+		 * @returns {ValidationResult}
+		 */
+		_validate: function(names) {
+			var formData = this.getValue(names);
+
+			// 待機中のValidationResultをabortする処理
+			// 指定されたnamesに該当するValidationResultをabortで中断する
+			//			if (names) {
+			//				names = $.isArray(names) ? names : [names];
+			//				for (var i = 0, l = names.length; i < l; i++) {
+			//					// 現在のプロパティ毎の非同期バリデート待ちのValidationResultは全て中断
+			//					var name = names[i];
+			//					var r = this._waitingValidationResultMap[name];
+			//					if (!r) {
+			//						continue;
+			//					}
+			//					r.abort();
+			//					delete this._waitingValidationResultMap[name];
+			//				}
+			//			} else {
+			//				// namesが指定されていない場合は全てのプロパティが対象
+			//				for ( var p in this._waitingValidationResultMap) {
+			//					this._waitingValidationResultMap[p].abort();
+			//				}
+			//				this._waitingValidationResultMap = {};
+			//			}
+
+			var result = this._validationLogic.validate(formData, names);
+
+			// TODO 動作確認としてログ出力
+			this.log.debug('-----------------------------------------');
+			this.log.debug('・validateするデータ');
+			this.log.debug(formData);
+			this.log.debug('・validate対象のプロパティ:' + names);
+			this.log.debug('・validate結果');
+			this.log.debug(result);
+			this.log.debug(result.isAsync ? '非同期' : '同期');
+			this.log.debug('-----------------------------------------');
+
+			if (result.isAsync) {
+				var properties = result.validatingProperties;
+				for (var i = 0, l = properties.length; i < l; i++) {
+					var p = properties[i];
+					this._waitingValidationResultMap[p] = result;
+				}
+				result.addEventListener('validate', this.own(function(ev) {
+					delete this._waitingValidationResultMap[ev.name];
+				}));
+			}
+
+			return result;
+		},
+
+		/**
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 */
+		_createPluginElementEventArgs: function(element, validationResult) {
+			var name = element.name;
+		},
+
+		/**
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 */
+		_pluginElementEventHandler: function(ctx, eventType) {
+			var target = ctx.event.target;
+			if (!this._isFormControls(target)) {
+				return;
+			}
+			var name = target.name;
+			if (!name) {
+				// name無しの要素は対象外
+				return;
+			}
+			// グループに属していればそのグループに対してvalidate
+			// タグにグループの指定が無くグループコンテナに属している場合
+			var groupName;
+			var $groups = $(this._getInputGroupElements());
+			if ($groups.find(target).length) {
+				var $group = $(target).closest('[data-' + DATA_INPUTGROUP_CONTAINER + ']');
+				groupName = $group.data(DATA_INPUTGROUP_CONTAINER);
+			}
+			var validateTargetName = groupName || name;
+			var validationResult = this._validate(validateTargetName);
+			this._callPluginElementEvent(eventType, target, name, validationResult);
+			if (groupName) {
+				// グループがあればグループについてのバリデート結果も通知
+				var groupTarget = this._getElementByName(groupName);
+				this._callPluginElementEvent(eventType, groupTarget, groupName, validationResult);
+			}
+		},
+
+		/**
+		 * プラグインのvalidateイベントの呼び出し
+		 *
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 */
+		_callPluginValidateEvent: function(type, result) {
+			var plugins = this._plugins;
+			for ( var pluginName in plugins) {
+				var plugin = plugins[pluginName];
+				if (plugin[type]) {
+					plugin[type].call(plugin, result);
+				}
+			}
+		},
+
+		/**
+		 * プラグインのフォームコントロール要素についてのイベント呼び出し
+		 *
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 */
+		_callPluginElementEvent: function(eventType, element, name, validationResult) {
+			var plugins = this._plugins;
+			for ( var pluginName in plugins) {
+				var plugin = plugins[pluginName];
+				if (plugin[eventType]) {
+					plugin[eventType](element, name, validationResult);
+				}
+			}
+		},
+
+		/**
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 */
+		_submitHandler: function(ctx, $el) {
+			ctx.event.preventDefault();
+			var validationResult = this.validate();
+			if (validationResult.isAsync) {
+				validationResult.addEventListener('validateComplete', function() {
+					if (this.isAllValid) {
+						// 送信
+						$el[0].submit();
+					}
+				});
+				return;
+			}
+			if (validationResult.isAllValid) {
+				// 送信
+				$el[0].submit();
+			}
+		},
+
+		/**
+		 * @private
+		 * @memberOf h5.ui.FormController
+		 */
+		_isFormControls: function(element) {
+			var $formControls = $(this._getElements());
+			return $formControls.index(element) !== -1;
+		}
+	};
+	h5.core.expose(controller);
 })();
 /* ------ h5.api.geo ------ */
 (function() {
@@ -22092,12 +26455,12 @@ var h5internal = {
 	/**
 	 * シーンコンテナ指定用データ属性名
 	 */
-	var DATA_H5_CONTAINER = 'data-h5-container';
+	var DATA_H5_CONTAINER = 'data-h5-scene-container';
 
 	/**
 	 * メインシーンコンテナ指定用データ属性名
 	 */
-	var DATA_H5_MAIN_CONTAINER = 'data-h5-main-container';
+	var DATA_H5_MAIN_CONTAINER = 'data-h5-main-scene-container';
 
 	/**
 	 * コンテナ生成済み識別用データ属性名
@@ -22113,6 +26476,98 @@ var h5internal = {
 	 * シーンコンテナに対するシーンの変更要求イベント名
 	 */
 	var EVENT_SCENE_CHANGE_REQUEST = 'sceneChangeRequest';
+
+	/**
+	 * シリアライズプレフィクス
+	 */
+	var SERIALIZE_PREFIX = '2|';
+
+
+	/** シーンコンテナのタイトルデータ属性 */
+	var DATA_H5_SCENE_TITLE = 'h5-scene-title';
+
+	/** シーンコントローラのシーンタイトル定義プロパティ */
+	var CONTROLLER_SCENE_TITLE = 'sceneTitle';
+
+	/**
+	 * シーン遷移タイプ
+	 */
+	var NAVIGATION_TYPE = {
+		NORMAL: 'normal',
+		ONCE: 'once',
+		SILENT: 'silent'
+	};
+
+	/**
+	 * Ajaxメソッド
+	 */
+	var METHOD = {
+		GET: 'get',
+		POST: 'post'
+	};
+
+	/**
+	 * 再表示不可画面用メッセージ
+	 */
+	var NOT_RESHOWABLE_MESSAGE = 'この画面は再表示できません。';
+
+	/**
+	 * メインシーンコンテナのURL履歴保持方法列挙体
+	 * <p>
+	 * メインシーンコンテナURL履歴保持方法です。何れかをh5.settings.scene.urlHistoryModeに指定します。
+	 * </p>
+	 * <dl>
+	 * <dt>h5.scene.urlHistoryMode.HASH</dt>
+	 * <dd>"hash" … シーン遷移パラメーターをハッシュに格納する。</dd>
+	 * <dt>h5.scene.urlHistoryMode.NONE</dt>
+	 * <dd>"none" … URLを変更しない。</dd>
+	 * <dt>h5.scene.urlHistoryMode.FULLRELOAD</dt>
+	 * <dd>"fullreload" … Ajaxを使用せず、ページ全体を再読み込みする(通常の遷移)。</dd>
+	 * <dt>h5.scene.urlHistoryMode.HISTORY</dt>
+	 * <dd>"history"(デフォルト) … HTML5 History APIを使用してURLを変更する。History APIが使用できない場合はハッシュを使用する。</dd>
+	 * <dt>h5.scene.urlHistoryMode.HISTORY_OR_HASH</dt>
+	 * <dd>"historyOrHash" … "history"と同義。</dd>
+	 * <dt>h5.scene.urlHistoryMode.HISTORY_OR_ERROR</dt>
+	 * <dd>"historyOrError" … HTML5 History APIを使用してURLを変更する。History APIが使用できない場合はエラーとする。</dd>
+	 * <dt>h5.scene.urlHistoryMode.HISTORY_OR_NONE</dt>
+	 * <dd>"historyOrNone" … HTML5 History APIを使用してURLを変更する。History APIが使用できない場合はURLを変更せずに遷移する。</dd>
+	 * <dt>h5.scene.urlHistoryMode.HISTORY_OR_FULLRELOAD</dt>
+	 * <dd>"historyOrFullreload" … HTML5 History APIを使用してURLを変更する。History
+	 * APIが使用できない場合はAjaxを使用せずに遷移する(通常遷移)。</dd>
+	 * </dl>
+	 *
+	 * @memberOf h5.scene
+	 * @name urlHistoryMode
+	 */
+	var URL_HISTORY_MODE = {
+		HASH: 'hash',
+		HISTORY: 'history',
+		NONE: 'none',
+		FULLRELOAD: 'fullreload',
+		HISTORY_OR_HASH: 'historyOrHash',
+		HISTORY_OR_ERROR: 'historyOrError',
+		HISTORY_OR_NONE: 'historyOrNone',
+		HISTORY_OR_FULLRELOAD: 'historyOrFullreload'
+	};
+
+	/**
+	 * Router URL履歴保持方法(判定後)
+	 */
+	var URL_HISTORY_ACTUAL_MODE = {
+		HASH: 'hash',
+		HISTORY: 'history',
+		NONE: 'none',
+		FULLRELOAD: 'fullreload'
+	};
+
+	/**
+	 * Router navigate動作モード指定
+	 */
+	var URL_HISTORY_MODE_ON_NAVIGATE = {
+		NONE: 'none',
+		FULLRELOAD: 'fullreload',
+		SILENT: 'silent'
+	};
 
 	// =============================
 	// Production
@@ -22137,15 +26592,18 @@ var h5internal = {
 	var ERR_CODE_CHANGE_SCENE_HASH_IN_TO = 100005;
 	/** エラーコード: メインシーンコンテナの遷移先にコントローラーを指定した(暫定対応) */
 	var ERR_CODE_MAIN_CHANGE_SCENE_TO_IS_CONTROLLER = 100006;
-	/** エラーコード: 指定された遷移効果が存在しない */
-	var ERR_CODE_TRANSITION_NOT_FOUND = 100007;
 	/** エラーコード: シーンコンテナ生成済みの要素でシーンコンテナを作成しようとした */
-	var ERR_CODE_CONTAINER_ALREADY_CREATED = 100008;
+	var ERR_CODE_CONTAINER_ALREADY_CREATED = 100007;
 	/** エラーコード: シーン遷移先HTMLのロードに失敗した */
-	var ERR_CODE_HTML_LOAD_FAILED = 100009;
+	var ERR_CODE_HTML_LOAD_FAILED = 100008;
 	/** コンテナ生成済みマークがあるにも関わらず所定のコントローラーがバインドされていない */
-	var ERR_CODE_CONTAINER_CONTROLLER_NOT_FOUND = 100010;
-
+	var ERR_CODE_CONTAINER_CONTROLLER_NOT_FOUND = 100009;
+	/** 遷移先URLが設定された最大長を超過した */
+	var ERR_CODE_URL_LENGTH_OVER = 100010;
+	/** RouterでHistoryAPIが使えないためエラー */
+	var ERR_CODE_HISTORY_API_NOT_AVAILABLE = 100011;
+	/** RouterでURL履歴保持方法指定が不正 */
+	var ERR_CODE_URL_HISTORY_MODE_INVALID = 100012;
 
 	// =============================
 	// Development Only
@@ -22154,7 +26612,6 @@ var h5internal = {
 	var fwLogger = h5.log.createLogger('h5.scene');
 
 	/* del begin */
-	//	var FW_LOG_H5_WHEN_INVALID_PARAMETER = 'h5.scene.when: 引数にpromiseオブジェクトでないものが含まれています。';
 	/**
 	 * 各エラーコードに対応するメッセージ
 	 */
@@ -22166,10 +26623,12 @@ var h5internal = {
 	errMsgMap[ERR_CODE_CHANGE_SCENE_TO_IS_NOT_STRING] = 'シーン遷移先は文字列で指定してください。to:{0}';
 	errMsgMap[ERR_CODE_CHANGE_SCENE_HASH_IN_TO] = 'シーン遷移先にハッシュは指定できません。to:{0}';
 	errMsgMap[ERR_CODE_MAIN_CHANGE_SCENE_TO_IS_CONTROLLER] = '現在、メインシーンコンテナのシーン遷移先にコントローラーは指定できません。to:{0}';
-	errMsgMap[ERR_CODE_TRANSITION_NOT_FOUND] = '指定された遷移効果は存在しません。transition:{0}';
 	errMsgMap[ERR_CODE_CONTAINER_ALREADY_CREATED] = '対象要素ですでにシーンコンテナが生成されているため、生成できません。';
 	errMsgMap[ERR_CODE_HTML_LOAD_FAILED] = 'シーン遷移先HTMLのロードに失敗しました。to:{0}';
 	errMsgMap[ERR_CODE_CONTAINER_CONTROLLER_NOT_FOUND] = '要素にコンテナ生成済みマークがあるにも関わらず所定のコントローラーがバインドされていません。';
+	errMsgMap[ERR_CODE_URL_LENGTH_OVER] = '遷移先URLが設定された最大長を超過しました。長さ:{0} 最大長:{1}';
+	errMsgMap[ERR_CODE_HISTORY_API_NOT_AVAILABLE] = 'HistoryAPIが使用できない環境では処理できない設定になっています。';
+	errMsgMap[ERR_CODE_URL_HISTORY_MODE_INVALID] = 'RouterのURL履歴保持方法指定が不正です。urlHistoryMode:{0}';
 
 	// メッセージの登録
 	addFwErrorCodeMap(errMsgMap);
@@ -22180,6 +26639,8 @@ var h5internal = {
 	// Cache
 	//
 	// =========================================================================
+	var isDisposing = h5internal.core.isDisposing;
+
 	// =========================================================================
 	//
 	// Privates
@@ -22192,6 +26653,71 @@ var h5internal = {
 	 * シーン機能初回適用判定フラグ
 	 */
 	var isInited = false;
+
+	/**
+	 * シーン間パラメーター用デフォルトプレフィクス
+	 */
+	var clientQueryStringPrefix = h5.settings.scene.clientQueryStringPrefix;
+
+	/**
+	 * FW用シーン間パラメーター用デフォルトプレフィクス
+	 */
+	var clientFWQueryStringPrefix = h5.settings.scene.clientFWQueryStringPrefix;
+
+	/**
+	 * シーン間パラメーター用デフォルトプレフィクス正規表現用文字列
+	 */
+	var clientQueryStringPrefixForRegExp = null;
+
+	/**
+	 * FW用シーン間パラメーター用デフォルトプレフィクス正規表現用文字列
+	 */
+	var clientFWQueryStringPrefixForRegExp = null
+
+	/**
+	 * Router URL履歴保持方法指定
+	 */
+	var urlHistoryMode = h5.settings.scene.urlHistoryMode;
+
+	/**
+	 * Router URL履歴保持方法(判定後)
+	 */
+	var urlHistoryActualMode = null;
+
+	/**
+	 * URL分割用正規表現
+	 */
+	var locationRegExp = /^(?:(\w+:)?\/\/(([^\/:]+)(?::(\d+))?))?((\/?.*?)([^\/]*?))(\?.*?)?(#.*)?$/;
+
+	/**
+	 * navigateの遷移先指定がコントローラーか否かを判断する正規表現
+	 */
+	var controllerRegexp = /Controller$/;
+
+	/**
+	 * メインシーンコンテナのシーン遷移先URLの最大長
+	 */
+	var urlMaxLength = null;
+
+	/**
+	 * 再表示不可画面URL/コントローラー
+	 */
+	var notReshowable = null;
+
+	/**
+	 * 再表示不可画面用メッセージ
+	 */
+	var notReshowableMessage = NOT_RESHOWABLE_MESSAGE;
+
+	/**
+	 * ベースURL
+	 */
+	var baseUrl = null;
+
+	/**
+	 * Routerインスタンス
+	 */
+	var router = null;
 
 	// =============================
 	// Functions
@@ -22219,7 +26745,7 @@ var h5internal = {
 			deep: true
 		});
 		for (var i = 0, len = controllers.length; i < len; i++) {
-			if(!h5internal.core.isDisposing(controllers[i])) {
+			if (!isDisposing(controllers[i])) {
 				controllers[i].dispose();
 			}
 		}
@@ -22358,10 +26884,6 @@ var h5internal = {
 	 * その場合、コントローラーがロード・バインドされたタイミングでresolveが実行されます。 シーンに対応するコントローラーを取得したい場合に利用してください。
 	 * </p>
 	 * <p>
-	 * メインシーンコンテナが未生成で、h5.settings.scene.autoCreateMainContainerにtrueが設定されている場合、
-	 * 所定の条件で対象要素および配下を走査し、最初の該当の要素でメインシーンコンテナを生成します。 条件の詳細については上述のリンクを参照してください
-	 * </p>
-	 * <p>
 	 * シーンコンテナ要素配下は、デフォルトで表示されるシーン配下のみを対象とします。(現版ではシーンコンテナの複数シーンは未対応)
 	 * このため、シーンコンテナ直下でないシーン要素は、シーンコンテナに所属していないとみなされ、その配下は処理対象とならないので注意が必要です。
 	 * </p>
@@ -22369,7 +26891,7 @@ var h5internal = {
 	 * シーンコンテナ生成済み要素配下は走査対象となりません。追加要素を対象としたい場合ははその部分を指定するようにしてください。
 	 * </p>
 	 *
-	 * @memberOf h5.scene
+	 * @private
 	 * @param {Element} [rootElement=document.body] 走査処理対象のルート要素。指定なしの場合はdocument.bodyをルート要素とします。
 	 * @param {String} [controllerName]
 	 *            バインド対象コントローラー名。指定なしの場合は'data-h5-controller'属性に指定されたすべてのコントローラーを対象とします。
@@ -22393,8 +26915,8 @@ var h5internal = {
 		}
 
 		// TODO(鈴木) メインシーンコンテナができていない場合のみ実行。
-		// この時点でメインシーンコンテナにはdata-h5-main-container属性があるようにする。
-		if (!mainContainer && h5.settings.scene.autoCreateMainContainer) {
+		// この時点でメインシーンコンテナにはdata-h5-main-scene-container属性があるようにする。
+		if (!mainContainer) {
 			var main = findWithSelf(root, '[' + DATA_H5_MAIN_CONTAINER + ']');
 			if (main.length === 0) {
 				main = findWithSelf(root, 'main');
@@ -22564,7 +27086,7 @@ var h5internal = {
 	/**
 	 * scan関数分割。シーンコンテナを作成用です。
 	 * <p>
-	 * カレントシーンとなる要素の探索と、そのコントローラー指定なしの場合のダミーコントローラーバインドを行います。
+	 * カレントシーンとなる要素の探索と、コントローラー指定なしの場合のダミーコントローラーバインドを行います。
 	 * </p>
 	 *
 	 * @private
@@ -22576,12 +27098,7 @@ var h5internal = {
 	function scanForContainer(rootElement, controllerName, args) {
 
 		var root = rootElement ? rootElement : document.body;
-
 		var dfd = h5.async.deferred();
-
-		// TODO(鈴木) 処理対象がシーンコンテナである場合、スキップする実装が必要。
-
-		// TODO(鈴木)
 		var isFound = false;
 		var dummyController = null;
 
@@ -22600,6 +27117,7 @@ var h5internal = {
 			}
 		}
 
+		// TODO(鈴木) data-h5-default-scene属性を持つ該当要素が見つからなかった場合
 		if (!isFound) {
 			// TODO(鈴木) data-h5-scene属性を持つ要素が直下先頭に存在するかの確認
 			var sceneElm = $(root).children().eq(0).filter('[' + DATA_H5_SCENE + ']');
@@ -22922,6 +27440,673 @@ var h5internal = {
 		}
 	});
 
+	// =============================
+	// Router
+	// =============================
+
+	/**
+	 * Router
+	 * <p>
+	 * 暫定実装。
+	 * </p>
+	 * <p>
+	 * URLのチェック対象となるのは、HirtoryAPI使用の場合はドメインルートより後、Hash使用の場合はHash(#より後)を対象とし、先頭からベースURLを除いたものです。
+	 * (ただし、Hash使用の場合でもHash値がない場合はドメインルートより後を使用) (これをここでは「ルーターURL」と呼称します)
+	 * </p>
+	 * <p>
+	 * ルーティングルールは引数optionのroutesプロパティに以下の形式の配列を指定します。
+	 * </p>
+	 *
+	 * <pre>
+	 * [{test:(文字列|正規表現|関数)}, func:(対応処理関数)}, ...]
+	 * </pre>
+	 *
+	 * <p>
+	 * testには、URLをチェックするためのルールを以下の様に指定します。
+	 * </p>
+	 * <dl>
+	 * <dt>文字列の場合</dt>
+	 * <dd>ルーターURLすべてを指定。(完全一致。パラメーター以下もすべて指定)</dd>
+	 * <dt>正規表現の場合</dt>
+	 * <dd>ルーターURLとマッチする正規表現を指定</dd>
+	 * <dt>関数の場合</dt>
+	 * <dd>ルーターURLを仮引数とし、対象の場合true、対象外の場合falseを返却する関数を指定</dd>
+	 * </dl>
+	 *
+	 * @private
+	 * @class
+	 * @param {Object} [option]
+	 * @param {Boolean} [option.urlHistoryMode] URL履歴保持方法指定
+	 * @param {String} [option.baseUrl] ベースURL
+	 * @param {Integer} [option.urlMaxLength=1800] 遷移先URL最大長
+	 * @param {Array} [option.routes] ルーティングルール。詳細は上述。
+	 * @returns {Router} Routerインスタンス
+	 */
+	function Router(option) {
+		option = option || {};
+
+		var self;
+
+		// TODO(鈴木) Routerはシングルトン実装とする。
+		if (!Router._instance) {
+			self = Router._instance = this;
+			var pushSate = !!(window.history.pushState);
+			self.urlHistoryMode = option.urlHistoryMode || URL_HISTORY_MODE.HISTORY;
+
+			// TODO(鈴木) URL履歴保持方法判定
+			switch (self.urlHistoryMode) {
+			case URL_HISTORY_MODE.HASH:
+				self.urlHistoryActualMode = URL_HISTORY_ACTUAL_MODE.HASH;
+				break;
+			case URL_HISTORY_MODE.NONE:
+				self.urlHistoryActualMode = URL_HISTORY_ACTUAL_MODE.NONE;
+				break;
+			case URL_HISTORY_MODE.FULLRELOAD:
+				self.urlHistoryActualMode = URL_HISTORY_ACTUAL_MODE.FULLRELOAD;
+				break;
+			case URL_HISTORY_MODE.HISTORY:
+			case URL_HISTORY_MODE.HISTORY_OR_HASH:
+			case URL_HISTORY_MODE.HISTORY_OR_ERROR:
+			case URL_HISTORY_MODE.HISTORY_OR_NONE:
+			case URL_HISTORY_MODE.HISTORY_OR_FULLRELOAD:
+				// TODO(鈴木) History APIが使用可能である場合
+				if (pushSate) {
+					self.urlHistoryActualMode = URL_HISTORY_ACTUAL_MODE.HISTORY;
+				}
+			}
+
+			// TODO(鈴木) HISTORY*指定でHistory APIが使用不可である場合
+			if (!self.urlHistoryActualMode && !pushSate) {
+				// TODO(鈴木) URL履歴保持方法判定
+				switch (self.urlHistoryMode) {
+				case URL_HISTORY_MODE.HISTORY_OR_ERROR:
+					// TODO(鈴木) HistoryAPIが使用できない環境では処理できない
+					throwFwError(ERR_CODE_HISTORY_API_NOT_AVAILABLE);
+					return;
+				case URL_HISTORY_MODE.HISTORY:
+				case URL_HISTORY_MODE.HISTORY_OR_HASH:
+					self.urlHistoryActualMode = URL_HISTORY_ACTUAL_MODE.HASH;
+					break;
+				case URL_HISTORY_MODE.HISTORY_OR_NONE:
+					self.urlHistoryActualMode = URL_HISTORY_ACTUAL_MODE.NONE;
+					break;
+				case URL_HISTORY_MODE.HISTORY_OR_FULLRELOAD:
+					self.urlHistoryActualMode = URL_HISTORY_ACTUAL_MODE.FULLRELOAD;
+					break;
+				}
+			}
+
+			if (!self.urlHistoryActualMode) {
+				// Router URL履歴保持方法指定が不正
+				throwFwError(ERR_CODE_URL_HISTORY_MODE_INVALID, self.urlHistoryMode);
+			}
+
+			if (option.baseUrl) {
+				var urlHelper = new UrlHelper(option.baseUrl);
+				self._baseUrl = urlHelper.pathname.replace(/^\/?(.*?)\/?$/, '/$1/');
+			}
+
+			self._urlMaxLength = option.urlMaxLength || URL_MAX_LENGTH;
+
+			// TODO(鈴木) on/off用にthisをバインド
+			var _onChange = self._onChange;
+			self._onChange = function() {
+				return _onChange.apply(self, arguments);
+			};
+
+		} else {
+			self = Router._instance;
+		}
+
+		// TODO(鈴木) 2回目以降のインスタンス生成時はroutesをマージするのみ、その他のパラメーターは無視
+		if (option.routes) {
+			self._routes = self._routes.concat(option.routes);
+		}
+
+		return self;
+	}
+
+	var RouterPrototype = {
+
+		/**
+		 * ルーティングルール
+		 *
+		 * @private
+		 * @memberOf Router
+		 */
+		_routes: [],
+
+		/**
+		 * ベースURL
+		 *
+		 * @private
+		 * @memberOf Router
+		 */
+		_baseUrl: null,
+
+		/**
+		 * URL監視フラグ
+		 *
+		 * @private
+		 * @memberOf Router
+		 */
+		_started: false,
+
+		/**
+		 * URL最大長
+		 *
+		 * @private
+		 * @memberOf Router
+		 */
+		_urlMaxLength: null,
+
+		/**
+		 * hashChange時コールバック抑制フラグ
+		 *
+		 * @private
+		 * @memberOf Router
+		 */
+		_silentOnce: false,
+
+		/**
+		 * Router URL履歴保持方法指定
+		 *
+		 * @private
+		 * @memberOf Router
+		 */
+		urlHistoryMode: null,
+
+		/**
+		 * Router URL履歴保持方法(判定後)
+		 *
+		 * @private
+		 * @memberOf Router
+		 */
+		urlHistoryActualMode: null,
+
+		/**
+		 * URL変更なしでの対応関数実行 URL文字列保持用
+		 *
+		 * @private
+		 * @memberOf Router
+		 */
+		_urlForSimulate: null,
+
+		/**
+		 * URL変化時コールバック
+		 *
+		 * @private
+		 * @memberOf Router
+		 */
+		_onChange: function() {
+
+			// TODO(鈴木) hash変更時にhashchangeを無視する場合
+			if (this._silentOnce) {
+				this._silentOnce = false;
+				return;
+			}
+
+			var current;
+			var contextualData = null;
+
+			if (this._urlForSimulate) {
+				// TODO(鈴木) URLを変更せずに対応処理を実行する場合(evaluate経由)
+				current = this._urlForSimulate;
+				// TODO(鈴木) contextualDataはこの場合でのみ使用可能
+				contextualData = this._contextualData;
+				this._urlForSimulate = this._contextualData = null;
+			} else {
+				// TODO(鈴木) 通常は現URLから情報を取得
+				var routerLocation = this._getRouterLocation();
+				current = routerLocation.pathname + routerLocation.search;
+			}
+
+			// TODO(鈴木) ルーティングルールとの突合用にベースURLを除去
+			var forTest = this._removeBaseUrl(current);
+
+			var result = null;
+			// TODO(鈴木) ルーティングテーブル探査
+			for (var i = 0; i < this._routes.length; i++) {
+				var route = this._routes[i];
+				if (isString(route.test)) {
+					// ルールが文字列の場合
+					if (forTest === route.test) {
+						result = route.func(current, contextualData);
+						break;
+					}
+				} else if (route.test instanceof RegExp) {
+					// ルールが正規表現の場合
+					if (route.test.test(forTest)) {
+						result = route.func(current, contextualData);
+						break;
+					}
+				} else if (typeof route.test === 'function') {
+					// ルールが関数の場合
+					if (route.test(forTest)) {
+						result = route.func(current, contextualData);
+						break;
+					}
+				}
+			}
+
+			// TODO(鈴木) 対応関数実行時に返却値がある場合
+			if (result) {
+				this.evaluate(result, contextualData);
+			}
+		},
+
+		/**
+		 * URL監視の開始
+		 *
+		 * @memberOf Router
+		 * @param {Object} [option]
+		 * @param {Boolean} [option.silent=false] 監視開始時にその時点のURLに対応した処理を実行しない場合にtrueを指定する。
+		 */
+		start: function(option) {
+			option = option || {};
+
+			if (this._started)
+				return;
+
+			this._checkUrlLength(location.href, {
+				throwOnError: true
+			});
+
+			this._started = true;
+
+			if (!option || !option.silent) {
+				this._onChange();
+			}
+
+			switch (this.urlHistoryActualMode) {
+			case URL_HISTORY_ACTUAL_MODE.HASH:
+				$(window).on('hashchange', this._onChange);
+				break;
+			case URL_HISTORY_ACTUAL_MODE.HISTORY:
+				$(window).on('popstate', this._onChange);
+				break;
+			}
+		},
+
+		/**
+		 * URL変更
+		 *
+		 * @memberOf Router
+		 * @param {String} to 遷移先指定
+		 * @param {Object} [option]
+		 * @param {Boolean} [option.replaceHistory=false] 前の画面の履歴を残さずに遷移する場合にtrueを指定する。
+		 * @param {String} [option.mode] 動作モード指定
+		 */
+		navigate: function(to, option) {
+			option = option || {};
+
+			if (!this._started) {
+				return;
+			}
+
+			this._checkUrlLength(to, {
+				throwOnError: true
+			});
+
+			var silent = false, mode = this.urlHistoryActualMode;
+
+			// TODO(鈴木) 動作モード判定
+			switch (option.mode) {
+			case URL_HISTORY_MODE_ON_NAVIGATE.SILENT:
+				silent = true;
+				break;
+			case URL_HISTORY_MODE_ON_NAVIGATE.NONE:
+				mode = URL_HISTORY_ACTUAL_MODE.NONE;
+				break;
+			case URL_HISTORY_MODE_ON_NAVIGATE.FULLRELOAD:
+				mode = URL_HISTORY_ACTUAL_MODE.FULLRELOAD;
+				break;
+			}
+
+			var result = this._toAbusolute(to);
+
+			// TODO(鈴木) URL履歴保持方法指定に合わせた処理
+
+			// 遷移先URLが現在と同一の場合、NONE以外のケースで、
+			// 「現URLに対応した処理を実行、ブラウザ履歴は追加しない」
+			// という動作にする。
+			//
+			// ・HistoryAPI pushStateは、同一URLでもブラウザ履歴が追加される。
+			//   その後のブラウザバックでpopstateも発生する。
+			// ・hash使用の場合は同一URLではブラウザ履歴は追加されず、hashchangeも発生しない。
+			// ・href使用の場合は同一URLではブラウザ履歴は追加されないが、通常画面更新は発生する。
+			//   が、URLにハッシュがついていると、画面更新は発生しない。(スクロールのみ)
+			//
+			// これらの差異を吸収するよう実装する。
+
+			switch (mode) {
+			case URL_HISTORY_ACTUAL_MODE.HASH:
+				if (silent) {
+					this._silentOnce = true;
+				}
+				//TODO #449 パラメーター順序違いを考慮した同一性の判定については要検討
+				if (this.compareUrl(result)) {
+					this._onChange();
+				} else {
+					if (option.replaceHistory) {
+						location.replace('#' + result);
+					} else {
+						location.hash = result;
+					}
+				}
+				break;
+			case URL_HISTORY_ACTUAL_MODE.HISTORY:
+				if (silent) {
+					this._silentOnce = true;
+				}
+				//TODO #449 パラメーター順序違いを考慮した同一性の判定については要検討
+				if (this.compareUrl(result)) {
+					this._onChange();
+				} else {
+					if (option.replaceHistory) {
+						history.replaceState(null, null, result);
+					} else {
+						history.pushState(null, null, result);
+					}
+					this._onChange();
+				}
+				break;
+			case URL_HISTORY_ACTUAL_MODE.FULLRELOAD:
+				//TODO #449 パラメーター順序違いを考慮した同一性の判定については要検討
+				if (this.compareUrl(result)) {
+					//TODO(鈴木) URLにHashが付いていても再表示する
+					location.reload();
+				} else if (option.replaceHistory) {
+					location.replace(result);
+				} else {
+					location.href = result;
+				}
+				break;
+			case URL_HISTORY_ACTUAL_MODE.NONE:
+				this.evaluate(result);
+				break;
+			}
+
+			return;
+		},
+
+		/**
+		 * URL監視の停止
+		 *
+		 * @memberOf Router
+		 */
+		stop: function() {
+			if (!this._started)
+				return;
+			this._started = false;
+			switch (this.urlHistoryActualMode) {
+			case URL_HISTORY_ACTUAL_MODE.HASH:
+				$(window).off('hashchange', this._onChange);
+				break;
+			case URL_HISTORY_ACTUAL_MODE.HISTORY:
+				$(window).off('popstate', this._onChange);
+				break;
+			}
+		},
+
+		/**
+		 * URL長のチェック
+		 * <p>
+		 * 指定のURLに遷移した場合、URL全体で設定された最大長を超過しないかをチェックします。 HistroyAPI使用の場合とHash使用の場合で長さは異なるので注意してください。
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf Router
+		 * @param {String} url
+		 * @param {Object} [option]
+		 * @param {Boolean} [option.writeBack=false] チェック結果詳細を仮引数のオブジェクトに書き込む場合にtrue。
+		 *            ※現時点では使用していない。将来的にメソッドを公開した場合での使用を想定。
+		 * @param {Boolean} [option.throwOnError=false] チェックエラー時に例外をスローする場合にtrue。dev版のみ有効。min版では無効。
+		 * @returns {Boolean} チェック結果
+		 */
+		_checkUrlLength: function(url, option) {
+			option = option || {};
+			if (this._urlMaxLength == null) {
+				return true;
+			}
+			var urlHelper = new UrlHelper(url);
+			if (urlHelper.protocol) {
+				// プロトコル指定ありの場合はそのままチェック。
+				return (url.length <= this._urlMaxLength);
+			}
+			var result = this._toAbusolute(url);
+			if (this.urlHistoryActualMode === URL_HISTORY_ACTUAL_MODE.HASH) {
+				var path = window.location.pathname;
+				var search = window.location.search || '';
+				result = path + search + '#' + result;
+			}
+			result = toAbsoluteUrl(result);
+
+			if (option.writeBack) {
+				option.url = result;
+				option.urlLength = result.length;
+				option.urlMaxLength = this._urlMaxLength;
+			}
+
+			if (result.length <= this._urlMaxLength) {
+				return true;
+				/* del begin */
+			} else if (option.throwOnError) {
+				// 遷移先URLが設定された最大長を超過した
+				throwFwError(ERR_CODE_URL_LENGTH_OVER, [result.length, this._urlMaxLength]);
+				return false;
+				/* del end */
+			} else {
+				fwLogger.warn(ERR_CODE_URL_LENGTH_OVER, result.length, this._urlMaxLength);
+				return false;
+			}
+		},
+
+		/**
+		 * ベースディレクトリの取得
+		 *
+		 * @memberOf Router
+		 * @returns {String}
+		 */
+		_getBaseDir: function() {
+			if (this._baseUrl) {
+				return this._baseUrl;
+			}
+			var routerLocation = this._getRouterLocation();
+			return routerLocation.dir;
+		},
+
+		/**
+		 * 先頭のベースURLを取り除いたURLを返却
+		 *
+		 * @private
+		 * @memberOf Router
+		 * @param {String} url
+		 * @returns {String}
+		 */
+		_removeBaseUrl: function(url) {
+			var baseUrl = this._baseUrl;
+			if (baseUrl && url.indexOf(baseUrl) === 0) {
+				url = url.replace(baseUrl, '');
+			}
+			return url;
+		},
+
+		/**
+		 * URL変更なしでの対応処理実行
+		 *
+		 * @memberOf Router
+		 * @param {String} url
+		 * @param {Any} contextualData
+		 */
+		evaluate: function(url, contextualData) {
+			var result = this._toAbusolute(url);
+			this._urlForSimulate = result;
+			this._contextualData = contextualData;
+			this._onChange();
+		},
+
+		/**
+		 * 相対アドレスの絶対アドレスへの変換
+		 *
+		 * @private
+		 * @memberOf Router
+		 * @param {String} url
+		 * @returns {String}
+		 */
+		_toAbusolute: function(url) {
+			var wk = null;
+			var urlHelper = new UrlHelper(url);
+			var routerLocation = this._getRouterLocation();
+			if (urlHelper.isSearch()) {
+				wk = routerLocation.pathname + urlHelper.search + urlHelper.hash;
+			} else if (urlHelper.isHash()) {
+				wk = routerLocation.pathname + routerLocation.search + urlHelper.hash;
+			} else {
+				wk = urlHelper.pathname + urlHelper.search + urlHelper.hash;
+				if (wk.indexOf('/') !== 0) {
+					var base = this._getBaseDir();
+					wk = base + wk;
+				}
+			}
+			wk = toAbsoluteUrl(wk);
+			urlHelper = new UrlHelper(wk);
+			var result = urlHelper.pathname + urlHelper.search + urlHelper.hash;
+			return result;
+		},
+		/**
+		 * URLの比較
+		 * <p>
+		 * 第二引数を指定しない場合、現時点のURLと比較します。
+		 * </p>
+		 *
+		 * @memberOf Router
+		 * @param {String} sbj 比較するURL
+		 * @param {String} [obj] 比較するURL。指定しない場合は、現時点のURLを対象とする。
+		 * @returns {Boolean} 同一の場合はtrue、異なる場合はfalse
+		 */
+		compareUrl: function(sbj, obj) {
+			if (obj == null) {
+				var routerLocation = this._getRouterLocation();
+				obj = routerLocation.pathname + routerLocation.search;
+			}
+			if (sbj.indexOf('/') !== 0) {
+				sbj = this._toAbusolute(sbj);
+			}
+			if (obj.indexOf('/') !== 0) {
+				obj = this._toAbusolute(obj);
+			}
+			return (sbj === obj);
+		},
+		/**
+		 * 現時点のURLの取得
+		 * <p>
+		 * HirtoryAPI使用の場合はドメインルートより後、Hash使用の場合はHash(#より後)を使用し、UrlHelperで返却します。
+		 * (ただし、Hash使用の場合でもHash値がない場合はドメインルートより後を使用します)
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf Router
+		 * @returns {UrlHelper}
+		 */
+		_getRouterLocation: function() {
+			var urlHelper;
+			if (this.urlHistoryActualMode === URL_HISTORY_ACTUAL_MODE.HASH && location.hash) {
+				urlHelper = new UrlHelper(location.hash.substring(1));
+			} else {
+				urlHelper = new UrlHelper(location.href);
+			}
+			return urlHelper;
+		}
+	};
+	$.extend(Router.prototype, RouterPrototype);
+
+	// =============================
+	// URL Helper
+	// =============================
+	/**
+	 * UrlHelper
+	 * <p>
+	 * 暫定実装。
+	 * </p>
+	 *
+	 * @private
+	 * @class
+	 * @param {String} url
+	 * @returns {UrlHelper}
+	 */
+	function UrlHelper(url) {
+		if (url == null) {
+			return;
+		}
+		var match = url.match(UrlHelper.regExp);
+		this.href = match[0] || '';
+		this.protocol = match[1] || '';
+		this.host = match[2] || '';
+		this.hostname = match[3] || '';
+		this.port = match[4] || '';
+		this.pathname = match[5] || '';
+		this.dir = match[6] || '';
+		this.file = match[7] || '';
+		this.search = match[8] || '';
+		this.hash = match[9] || '';
+	}
+	$.extend(UrlHelper.prototype, {
+		/**
+		 * @memberOf UrlHelper
+		 */
+		href: undefined,
+		/**
+		 * @memberOf UrlHelper
+		 */
+		protocol: undefined,
+		/**
+		 * @memberOf UrlHelper
+		 */
+		host: undefined,
+		/**
+		 * @memberOf UrlHelper
+		 */
+		hostname: undefined,
+		/**
+		 * @memberOf UrlHelper
+		 */
+		port: undefined,
+		/**
+		 * @memberOf UrlHelper
+		 */
+		pathname: undefined,
+		/**
+		 * @memberOf UrlHelper
+		 */
+		dir: undefined,
+		/**
+		 * @memberOf UrlHelper
+		 */
+		file: undefined,
+		/**
+		 * @memberOf UrlHelper
+		 */
+		search: undefined,
+		/**
+		 * @memberOf UrlHelper
+		 */
+		hash: undefined,
+		/**
+		 * @memberOf UrlHelper
+		 */
+		isSearch: function() {
+			return !this.protocol && !this.host && !this.pathname && this.search;
+		},
+		/**
+		 * @memberOf UrlHelper
+		 */
+		isHash: function() {
+			return !this.protocol && !this.host && !this.pathname && !this.search && this.hash;
+		}
+	});
+	UrlHelper.regExp = locationRegExp;
+
 	// =========================================================================
 	//
 	// Body
@@ -22933,8 +28118,64 @@ var h5internal = {
 		new RMIReceiver();
 	}
 
-	function InvocationProxy() {
+	/**
+	 * シーンクラス
+	 * <p>
+	 * コントローラ化の際に、コントローラに"scene"プロパティが追加され、コントローラごとに生成されるこのクラスのインスタンスが格納されます
+	 * </p>
+	 *
+	 * @class
+	 * @name Scene
+	 */
+	/**
+	 * @private
+	 * @param {Controller} controller
+	 */
+	function Scene(controller) {
+		this.__controller = controller;
+	}
 
+	$.extend(Scene.prototype, {
+		/**
+		 * シーン遷移イベントを発行します。
+		 * <p>
+		 * 第1引数には、{@link SceneContainerController.navigate}の引数と同じ形式でパラメータを指定してください。
+		 * </p>
+		 *
+		 * @param {String|Object} data
+		 * @memberOf Scene
+		 */
+		navigate: function(data) {
+			if (isDisposing(this.__controller)) {
+				// TODO エラー
+				return;
+			}
+			this.__controller.trigger(EVENT_SCENE_CHANGE_REQUEST, data);
+		},
+
+		/**
+		 * このコントローラを直接包含しているシーンコンテナを取得します。
+		 * <p>
+		 * シーンコンテナ要素が存在しない、またはシーンコンテナ未生成の場合はnullを返却します。
+		 * </p>
+		 *
+		 * @returns {SceneContainerController} シーンコンテナ
+		 * @memberOf Scene
+		 */
+		getParentContainer: function() {
+			if (isDisposing(this.__controller)) {
+				return null;
+			}
+			var element = getParentContainer(this.__controller.rootElement);
+			if (!element) {
+				return null;
+			}
+			return getSceneContainers(element)[0];
+		}
+	});
+
+	function InvocationProxy() {
+	// 空コンストラクタ
 	}
 
 	function RemoteWindow(url, windowName, features, isModal) {
@@ -23105,81 +28346,68 @@ var h5internal = {
 	/**
 	 * HTML要素取得(通信)
 	 * <p>
-	 * 第二引数にコンテナ指定を追加。これが指定された場合、第一引数により取得したHTML内で、 data-h5-container属性の値がこれに一致する要素を対象とする。
+	 * 第二引数にコンテナ指定を追加。これが指定された場合、第一引数により取得したHTML内で、 data-h5-scene-container属性の値がこれに一致する要素を対象とする。
 	 * </p>
 	 *
 	 * @private
 	 * @param source
-	 * @param container
+	 * @param method
 	 * @returns {Promise}
 	 */
-	function loadContentsFromUrl(source, container) {
+	function loadContentsFromUrl(source, method, serverArgs) {
 		var dfd = h5.async.deferred();
 
 		// TODO htmlだとスクリプトが実行されてしまうのでフルHTMLが返されるとよくない
 		// 部分HTML取得の場合のことを考慮。
 		var xhr = h5.ajax({
-			url : source,
-			dataType : 'html'
+			url: source,
+			dataType: 'html',
+			method: method || 'get',
+			data: serverArgs
 		});
 
-		xhr.done(
-				function(data) {
+		xhr
+				.done(
+						function(data) {
 
-					// TODO(鈴木) ここでdataからbody部分のみ抜く。
-					data = extractBody(data);
+							// TODO(鈴木) ここでdataからbody部分のみ抜く。
+							data = extractBody(data);
 
-					// 先頭が表示文字列テキストノードの場合はコンテナ要素で囲む
-					if (startByTextRegexp.test(data)) {
-						data = '<div ' + DATA_H5_CONTAINER + '>' + data
-								+ '</div>';
-					}
+							// 先頭が表示文字列テキストノードの場合はコンテナ要素で囲む
+							if (startByTextRegexp.test(data)) {
+								data = '<div ' + DATA_H5_CONTAINER + '>' + data + '</div>';
+							}
 
-					var $dom = $(data);
+							var $dom = $(data);
 
-					if (container) {
-						var $container = findWithSelf($dom, '['
-								+ DATA_H5_CONTAINER + '="' + container + '"]');
-						if ($container.length === 0) {
-							// ロードしたHTML内に指定のコンテナが存在しない場合はエラー
-							throwFwError(ERR_CODE_TARGET_CONTAINER_NOT_FOUND, [
-									source, container ]);
-						}
-						$dom = $container.eq(0);
-					} else {
-						// TODO(鈴木)
-						// mainタグかdata-main-container属性要素があればその内容を対象とする。
-						// 通常のシーンコンテナ内にmainとdata-main-containerはない前提。
-						var main = findWithSelf($dom, '['
-								+ DATA_H5_MAIN_CONTAINER + ']');
-						// TODO(鈴木)
-						// 現状のフラグに基づいて遷移先のHTMLからメインシーンコンテナに該当する部分を抽出。
-						// さすがに遷移先HTMLでのフラグ状態までは見られない。。
-						if (h5.settings.scene.autoCreateMainContainer) {
-							if (main.length === 0)
+							// TODO(鈴木)
+							// mainタグかdata-main-container属性要素があればその内容を対象とする。
+							// 通常のシーンコンテナ内にmainとdata-main-containerはない前提。
+							var main = findWithSelf($dom, '[' + DATA_H5_MAIN_CONTAINER + ']');
+							// TODO(鈴木)
+							// 遷移先のHTMLからメインシーンコンテナに該当する部分を抽出。
+							if (main.length === 0) {
 								main = findWithSelf($dom, 'main');
-						}
-						if (main.length > 0) {
-							$dom = main.eq(0);
-							$dom.attr(DATA_H5_MAIN_CONTAINER,
-									DATA_H5_MAIN_CONTAINER);
-						}
-					}
+							}
+							if (main.length > 0) {
+								$dom = main.eq(0);
+								$dom.attr(DATA_H5_MAIN_CONTAINER, DATA_H5_MAIN_CONTAINER);
+							}
 
-					// ルート要素が複数か、単一でもコンテナ要素、またはBODYのダミーでなければコンテナ要素で囲む
-					if ($dom.length > 1
-							|| (!isContainer($dom) && !$dom.is('['
-									+ DATA_H5_DYN_DUMMY_BODY + ']'))) {
-						$dom = $('<div ' + DATA_H5_CONTAINER + '></div>').append($dom);
-					}
+							// ルート要素が複数か、単一でもコンテナ要素、またはBODYのダミーでなければコンテナ要素で囲む
+							if ($dom.length > 1
+									|| (!isContainer($dom) && !$dom.is('[' + DATA_H5_DYN_DUMMY_BODY
+											+ ']'))) {
+								$dom = $('<div ' + DATA_H5_CONTAINER + '></div>').append($dom);
+							}
 
-					wrapScene($dom);
+							wrapScene($dom);
 
-					dfd.resolve($dom.children());
+							dfd.resolve($dom.children());
 
-				}).fail(function(error) {
-			dfd.reject(error);
-		});
+						}).fail(function(error) {
+					dfd.reject(error);
+				});
 
 		return dfd;
 	}
@@ -23191,21 +28419,21 @@ var h5internal = {
 	 *
 	 * @private
 	 * @param source
-	 * @param container
+	 * @param method
 	 * @returns {Promise}
 	 */
-	function loadContents(source, container) {
+	function loadContents(source, method, serverArgs) {
 		var dfd;
 
 		if (isString(source)) {
-			dfd = loadContentsFromUrl(source, container);
+			dfd = loadContentsFromUrl(source, method, serverArgs);
 		} else {
 			dfd = h5.async.deferred();
 
 			var contentsRoot;
 			if (source == null) {
 				// 新しくdiv要素を生成
-				contentsRoot = $.parseHTML(NEW_SCENE_HTML);
+				contentsRoot = $(NEW_SCENE_HTML).get(0);
 			} else {
 				// DOM要素が指定されたのでそれをそのまま使用
 				contentsRoot = h5.u.obj.isJQueryObject(source) ? source[0] : source;
@@ -23223,22 +28451,6 @@ var h5internal = {
 	 * シーン遷移効果保持用オブジェクト
 	 */
 	var transitionTypeMap = {};
-
-	/**
-	 * シーン遷移効果登録
-	 *
-	 * @private
-	 * @param type
-	 * @param constructor
-	 */
-	function registerSceneTransition(type, constructor) {
-		if (transitionTypeMap[type]) {
-			//
-		}
-		transitionTypeMap[type] = constructor;
-	}
-
-	var DEFAULT_SCENE_TRANSITION_TYPE = 'default';
 
 	/**
 	 * デフォルトシーン遷移効果
@@ -23269,18 +28481,181 @@ var h5internal = {
 		}
 	});
 
-	registerSceneTransition(DEFAULT_SCENE_TRANSITION_TYPE, defaultTransitionController);
-
 	/**
-	 * pushState関数
+	 * シーン遷移用パラメーターシリアライズ
 	 *
 	 * @private
-	 * @param state
-	 * @param title
-	 * @param url
+	 * @param obj
+	 * @param parent
+	 * @return {String}
 	 */
-	function pushState(state, title, url) {
-		history.pushState(state, title, url);
+	function serialize(obj, parent) {
+		var str = '';
+		function callback(k, v) {
+			if (str)
+				str += '&';
+			if (!parent && (k === 'args' || k === 'serverArgs')) {
+				str += serialize(v, k);
+			} else {
+				if (parent === 'serverArgs') {
+					var _k = encodeURIComponent(k);
+					if (v instanceof Array) {
+						var _str = '';
+						for (var i = 0; i < v.length; i++) {
+							if (_str)
+								_str += '&';
+							_str += _k + '[]';
+							_str += '=';
+							_str += encodeURIComponent(v[i]);
+						}
+						str += _str;
+					} else {
+						str += _k;
+						str += '=';
+						str += encodeURIComponent(v);
+					}
+				} else {
+					if (parent === 'args') {
+						str += encodeURIComponent(clientQueryStringPrefix + k);
+					} else {
+						str += encodeURIComponent(clientFWQueryStringPrefix + k);
+					}
+					str += '=';
+					str += encodeURIComponent(h5.u.obj.serialize(v).substring(2));
+				}
+			}
+		}
+		$.each(obj, callback);
+		return str;
+	}
+
+	/**
+	 * シーン遷移用パラメーターデシリアライズ
+	 *
+	 * @private
+	 * @param str
+	 * @return {Object}
+	 */
+	function deserialize(str) {
+		if (!deserialize._checkKeyRegExp) {
+			deserialize._checkKeyRegExp = new RegExp('^(' + clientQueryStringPrefixForRegExp + '|'
+					+ clientFWQueryStringPrefixForRegExp + ')?(.+)');
+			deserialize._checkArrayRegExp = /^(.*)\[\]$/;
+		}
+		var obj = {};
+		var checkKeyRegExp = deserialize._checkKeyRegExp;
+		var checkArrayRegExp = deserialize._checkArrayRegExp;
+		function callback(i, pair) {
+			pair = pair.split('=');
+			var k = decodeURIComponent(pair[0]);
+			var v = decodeURIComponent(pair[1]);
+			var match = k.match(checkKeyRegExp);
+			if (!match) {
+				return;
+			}
+			var prefix = match[1] || '';
+			var name = match[2];
+
+			if (!prefix) {
+				// prefixが無い場合はserverArgs
+				obj.serverArgs = obj.serverArgs || {};
+				var _match = name.match(checkArrayRegExp);
+				if (_match) {
+					var _name = _match[1];
+					if (_name in obj.serverArgs === false) {
+						obj.serverArgs[_name] = [];
+					}
+					if (obj.serverArgs[_name] instanceof Array) {
+						obj.serverArgs[_name].push(v);
+					}
+				} else {
+					obj.serverArgs[name] = v;
+				}
+			}
+
+			if (prefix === clientQueryStringPrefix) {
+				obj.args = obj.args || {};
+				obj.args[name] = h5.u.obj.deserialize(SERIALIZE_PREFIX + v);
+			} else if (prefix === clientFWQueryStringPrefix) {
+				obj[name] = h5.u.obj.deserialize(SERIALIZE_PREFIX + v);
+			}
+		}
+		$.each(str.split('&'), callback);
+		return obj;
+	}
+
+	/**
+	 * シーン遷移用パラメーター文字列削除
+	 *
+	 * @private
+	 * @param str
+	 * @return {String}
+	 */
+	function clearParam(str) {
+		if (!str)
+			return '';
+		if (!clearParam._regExp) {
+			clearParam._regExp = new RegExp('(^|&)(?:' + clientQueryStringPrefixForRegExp + '|'
+					+ clientFWQueryStringPrefixForRegExp + ')[^=]*=.*?(?=&|$)', 'g');
+		}
+		var regExp = clearParam._regExp;
+		var urlHelper = new UrlHelper(str);
+		var path = urlHelper.pathname;
+		var search = urlHelper.search || '';
+		search = search.substring(1).replace(regExp, '');
+		if (search)
+			search = '?' + search;
+		return path + search;
+	}
+
+	/**
+	 * URLからシーン遷移パラメーターを取得
+	 *
+	 * @private
+	 * @param url
+	 * @return {Object}
+	 */
+	function getParamFromUrl(url) {
+		var urlHelper = new UrlHelper(url);
+		var path = urlHelper.pathname || '';
+		var search = urlHelper.search || '';
+		var param = deserialize(search.substring(1));
+		if (!param.to) {
+			param.to = path;
+		}
+		return param;
+	}
+
+	/**
+	 * URL用にシーン遷移パラメーターを文字列に変換
+	 *
+	 * @private
+	 * @param param
+	 * @return {String}
+	 */
+	function convertParamToUrl(param) {
+		// TODO(鈴木) 遷移先指定がない場合、現在のURLを使用
+		param = $.extend(true, {}, param);
+		var to = param.to;
+		var path = '', search = '';
+		var isController = controllerRegexp.test(to);
+		if (isController) {
+			to = '';
+		} else {
+			// TODO(鈴木) paramからtoを削除(URLに余計な情報を残さないため)
+			delete param.to;
+			to = clearParam(to);
+			var urlHelper = new UrlHelper(to);
+			path = urlHelper.pathname;
+			search = urlHelper.search;
+		}
+		var paramStr = serialize(param);
+		if (paramStr) {
+			search += (search) ? '&' : '?';
+			search += paramStr;
+		}
+		var result = path + search;
+		return result;
 	}
 
 	/**
@@ -23289,15 +28664,25 @@ var h5internal = {
 	var mainContainer = null;
 
 	/**
-	 * changeSceneの遷移先指定コントローラーか否かを判断する正規表現
+	 * 再表示不可画面用コントローラー
+	 * <p>
+	 * シーン遷移時シーン間パラメーターをURLに保持しない場合で、ブラウザ履歴等により再表示した場合に表示する画面。
+	 * </p>
+	 *
+	 * @private
 	 */
-	var controllerRegexp = /Controller$/;
+	var NotReshowableController = {
+		__name: 'h5.scene.NotReshowableController',
+		__init: function(context) {
+			var _notReshowableMessage = context.args._notReshowableMessage;
+			$(this.rootElement).html('<h1>' + _notReshowableMessage + '</h1>');
+		}
+	};
 
 	/**
 	 * シーンコンテナクラス
 	 * <p>
-	 * 実体はコントローラーです。
-	 * シーンコンテナを生成する場合はh5.scene.createSceneContainer()を使用してください。
+	 * 実体はコントローラーです。 シーンコンテナを生成する場合はh5.scene.createSceneContainer()を使用してください。
 	 * </p>
 	 *
 	 * @class
@@ -23305,7 +28690,7 @@ var h5internal = {
 	 */
 	var SceneContainerController = {
 
-		__name : 'h5.scene.SceneContainerController',
+		__name: 'h5.scene.SceneContainerController',
 
 		/**
 		 * メインシーンコンテナであるか否か
@@ -23314,7 +28699,7 @@ var h5internal = {
 		 * @type Boolean
 		 * @memberOf SceneContainerController
 		 */
-		isMain : false,
+		isMain: false,
 
 		/**
 		 * 画面遷移効果
@@ -23322,7 +28707,7 @@ var h5internal = {
 		 * @private
 		 * @memberOf SceneContainerController
 		 */
-		_transition : null,
+		_transition: null,
 
 		/**
 		 * 現在表示しているシーンのコントローラー
@@ -23330,7 +28715,7 @@ var h5internal = {
 		 * @private
 		 * @memberOf SceneContainerController
 		 */
-		_currentController : null,
+		_currentController: null,
 
 		/**
 		 * リンククリックジャックによるシーン遷移の可否
@@ -23338,7 +28723,7 @@ var h5internal = {
 		 * @private
 		 * @memberOf SceneContainerController
 		 */
-		_isClickjackEnabled : false,
+		_isClickjackEnabled: false,
 
 		/**
 		 * シーン遷移時に使用するDeferredオブジェクト
@@ -23346,27 +28731,57 @@ var h5internal = {
 		 * @private
 		 * @memberOf SceneContainerController
 		 */
-		_dfd : null,
+		_dfd: null,
 
 		/**
-		 * changeScene経由で_changeSceneを実行したか否か
+		 * navigate経由で_navigateを実行したか否か
 		 *
 		 * @private
 		 * @memberOf SceneContainerController
 		 */
-		_isNavigated : false,
+		_isNavigated: false,
 
 		/**
-		 * メインシーンコンテナでURLを連動せずにシーンを遷移する場合を識別するためのフラグ
-		 *
+		 * メインシーンコンテナ シーン遷移時パラメーター迂回用
 		 * <p>
-		 * 初期はtrueで連動せず。初期処理完了後にfalseにする。
+		 * 遷移パラメーター(FW用以外)をURLに保持しない場合に、このプロパティを経由する。
 		 * </p>
 		 *
 		 * @private
 		 * @memberOf SceneContainerController
 		 */
-		_notPushState : true,
+		_detour: {},
+
+		/**
+		 * Routerインスタンス
+		 *
+		 * @private
+		 * @memberOf SceneContainerController
+		 */
+		_router: null,
+
+		/**
+		 * 初期表示フラグ
+		 * <p>
+		 * メインシーンコンテナで使用。
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf SceneContainerController
+		 */
+		_first: true,
+
+		/**
+		 * このシーンコンテナが現在表示しているシーンのタイトル
+		 * <p>
+		 * getTitle()で取得できる
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf SceneContainerController
+		 * @type {string}
+		 */
+		_title: '',
 
 		/**
 		 * __init
@@ -23374,30 +28789,26 @@ var h5internal = {
 		 * @private
 		 * @memberOf SceneContainerController
 		 */
-		__init : function(context) {
+		__init: function(context) {
 
 			var args = context.args || {};
 
-			var element  = this.rootElement;
+			var element = this.rootElement;
 			var isMain = args.isMain;
-			/*var initialSceneInfo = args.initialSceneInfo;*/
+			/* var initialSceneInfo = args.initialSceneInfo; */
 
 			var that = this;
 
 			this.isMain = !!isMain;
+			this.followTitle = isMain && args.followTitle;
 
-			if (this.isMain) {
-				if (mainContainer) {
-					// すでにメインシーンコンテナが生成されている場合にエラー
-					throwFwError(ERR_CODE_MAIN_CONTAINER_ALREADY_CREATED);
-				}
+			if (this.isMain && mainContainer) {
+				// すでにメインシーンコンテナが生成されている場合にエラー
+				throwFwError(ERR_CODE_MAIN_CONTAINER_ALREADY_CREATED);
 			}
 
-			// TODO(鈴木) とりあえずデフォルトのtransitionを使用。
-			this._transition = this._createTransition();
-			this._transition.onChangeStart(element);
-
-			this._containerName = $(element).attr(DATA_H5_MAIN_CONTAINER) || $(element).attr(DATA_H5_CONTAINER);
+			this._containerName = $(element).attr(DATA_H5_MAIN_CONTAINER)
+					|| $(element).attr(DATA_H5_CONTAINER);
 
 			// TODO(鈴木) シーンコンテナ下はコントローラーを管理
 			this._currentController = null;
@@ -23405,47 +28816,43 @@ var h5internal = {
 			// TODO(鈴木) コンテナ内にシーン要素がなければ追加する
 			wrapScene(element);
 
-			this.on('{rootElement}', EVENT_SCENE_CHANGE_REQUEST, this.own(this._onSceneChangeRequest));
+			// TODO(鈴木) とりあえずデフォルトのtransitionを使用。
+			this._transition = new defaultTransitionController();
+			this._transition.onChangeStart(element);
 
+			this.on('{rootElement}', EVENT_SCENE_CHANGE_REQUEST, this
+					.own(this._onSceneChangeRequest));
 
-			var param = {};
+			this._router = router;
 
 			if (this.isMain) {
 
 				mainContainer = this;
 
-				this.on('{window}', 'popstate', this.own(this._onWindowPopstate));
-
-				//_isClickjackEnabledがtrueの場合のみ有効。
-				//TODO:フラグのセット方法
-				if(this._isClickjackEnabled){
+				// _isClickjackEnabledがtrueの場合のみ有効。
+				// TODO:フラグのセット方法
+				if (this._isClickjackEnabled) {
 					this.on('{a}', 'click', this.own(this._onAClick));
 				}
 
-				// TODO(鈴木) メインシーンコンテナの場合、URLパラメータを取得して使用。
-				// onPopStateを呼んでしまうと余計にHTMLを取りに行くことになるので、直接_changeSceneをto=elementで呼び出す。
-				// URLからのパラメーター取得は現状では無効とする。
-				// param = toQueryParams((location.search ||
-				// '').substring(1));
-				param = {};
+				// TODO(鈴木) Routerでの判定結果を取得
+				urlHistoryActualMode = this._router.urlHistoryActualMode;
 
-			}
-
-			/*if(initialSceneInfo){
-				this.changeScene(initialSceneInfo);
-				// TODO(鈴木)  _currentControllerへの登録等は内部で行われるので後続処理は不要
-			}else{
-			*/
+				// TODO(鈴木) Router処理開始
+				this._router.start();
+			} else {
 				// TODO(鈴木) カレントとなるシーンを探索してscan
-				scanForContainer(element, null, param.args).done(
-						function(controller) {
-							that._currentController = controller;
-							that._transition.onChangeEnd(that.rootElement,
-									null, element);
-							that._transition = null;
-						});
-			/*}*/
-
+				scanForContainer(element).done(function(controller) {
+					that._currentController = controller;
+					that._transition.onChangeEnd(that.rootElement, null, controller.rootElement);
+					that._transition = null;
+					// タイトルの設定
+					var title = that._getTitleFromCurrentScene();
+					if (title != null) {
+						that.setTitle(title);
+					}
+				});
+			}
 		},
 
 		/**
@@ -23454,14 +28861,21 @@ var h5internal = {
 		 * @private
 		 * @memberOf SceneContainerController
 		 */
-		__dispose : function(){
+		__dispose: function() {
 
-			if(!h5internal.core.isDisposing(this._currentController)) {
+			if (!isDisposing(this._currentController)) {
 				this._currentController.dispose();
 			}
 
 			this._currentController = null;
-			$(this.rootElement).empty();
+
+			if (this.isMain) {
+				// TODO(鈴木) Router処理停止
+				this._router.stop();
+				this._router = null;
+				// メインシーンコンテナインスタンス保持用変数をnullに更新
+				mainContainer = null;
+			}
 		},
 
 		/**
@@ -23471,29 +28885,10 @@ var h5internal = {
 		 * @memberOf SceneContainerController
 		 * @param context
 		 */
-		_onAClick : function(context) {
+		_onAClick: function(context) {
 			context.event.preventDefault();
 			var href = context.event.originalEvent.target.href;
-			this.changeScene(href);
-		},
-
-		/**
-		 * 画面遷移時のpopState時のコールバック
-		 *
-		 * <p>
-		 * メインシーンコンテナの場合のみ有効。
-		 * </p>
-		 *
-		 * @private
-		 * @memberOf SceneContainerController
-		 * @param context
-		 */
-		_onWindowPopstate : function(context) {
-			// TODO(鈴木) 現状はURLでパラメーター渡しはしない
-			// var param = toQueryParams((location.search || '').substring(1));
-			// this._changeScene(location.href, param);
-			this._changeScene(location.href);
-			// TODO(鈴木) hrefからparamに該当する部分を削除して使用したほうがよいか？
+			this.navigate(href);
 		},
 
 		/**
@@ -23503,10 +28898,10 @@ var h5internal = {
 		 * @memberOf SceneContainerController
 		 * @param context
 		 */
-		_onSceneChangeRequest : function(context) {
+		_onSceneChangeRequest: function(context) {
 			context.event.stopPropagation();
 			setTimeout(this.own(function() {
-				this.changeScene(context.evArg);
+				this.navigate(context.evArg);
 			}), 0);
 		},
 
@@ -23527,37 +28922,55 @@ var h5internal = {
 		 * </li>
 		 * </ul>
 		 *
-		 * @param {String|Object} param
-		 *            遷移先文字列、または遷移用オプション。
+		 * @param {String|Object} param 遷移先文字列、または遷移用オプション。
 		 *            <p>
 		 *            遷移先文字列の場合は、HTMLを返却するURLか、コントローラーの__name属性を指定します。<br>
 		 *            遷移用オプションの場合は、以下のプロパティを持ちます。
 		 *            </p>
-		 * @param {String} param.to
-		 *            遷移先指定。HTMLを返却するURLか、コントローラーの__name属性を指定します。指定必須です。
-		 * @param {String}[param.transition='default']
-		 *            遷移効果指定。指定しない場合は'default'が使用されます。(現在、'default'以外は指定できません)
-		 * @param {String}[param.container]
-		 *            toで指定される要素内の部分を表示する場合、その要素のdata-h5-container属性の値を指定します。
-		 * @param {Any}[param.args]
-		 *            デフォルトシーンに対応するコントローラー生成時に渡されるパラメータを指定します。
+		 * @param {String} param.to 遷移先指定。HTMLを返却するURLか、コントローラーの__name属性を指定します。指定必須です。
+		 * @param {Any}[param.args] デフォルトシーンに対応するコントローラー生成時に渡されるパラメータを指定します。
+		 * @param {string}[param.navigationType="normal"]
+		 *            メインシーンコンテナのみで有効。遷移時のパターンを指定します。以下の値が設定できます。
+		 *            <dl>
+		 *            <dt>"normal"</dt>
+		 *            <dd>URLに開発者指定のパラメーターを入れます(デフォルト)。ブラウザバック等でパラメーター含めて再表示可能です。h5.scene.navigationType.NORMALと同値なのでこれを指定してもよいです。</dd>
+		 *            <dt>"once"</dt>
+		 *            <dd>URLに開発者指定のパラメーターを入れません。フレームワーク用パラメーターのみとなります。ブラウザバック等で再表示はできなくなります(再表示不可のメッセージ画面(後述)を表示)。h5.scene.navigationType.ONCEと同値なのでこれを指定してもよいです。</dd>
+		 *            <dt>"silent"</dt>
+		 *            <dd>URLは変化させずに遷移します。h5.scene.navigationType.SILENTと同値なのでこれを指定してもよいです。</dd>
+		 *            </dl>
+		 * @param {boolean}[param.replaceHistory=false] URLを置換しつつ遷移するか否か。置換して遷移する場合はtrueを設定します。
+		 *            デフォルトはfalseです。trueで遷移した場合、元の画面のURLは履歴から削除されるため、ブラウザバックでは戻れなくなります。
+		 * @param {string} [param.method="get"]
+		 *            toの設定値がHTMLページのURLである場合に有効。AjaxでのHTMLデータ取得時のHTTPメソッドを指定します。
+		 *            <dl>
+		 *            <dt>"get"</dt>
+		 *            <dd>GETメソッドで取得します(デフォルト)。h5.scene.method.GETと同値なのでこれを指定してもよいです。</dd>
+		 *            <dt>"post"</dt>
+		 *            <dd>POSTメソッドで取得します。h5.scene.method.POSTと同値なのでこれを指定してもよいです。</dd>
+		 *            <dd>ブラウザバック等で再表示はできなくなります。</dd>
+		 *            </dl>
+		 * @param {Object} [param.serverArgs]
+		 *            toの設定値がHTMLページのURLである場合に有効。AjaxでのHTMLデータ取得時のパラメーターを指定します。jQuery.ajaxの引数のdataプロパティに相当します。ただし、直下メンバーの各値として配列以外のオブジェクトは設定できません。値の配列については、その要素にオブジェクトは設定できません。
 		 * @returns {Promise} Promiseオブジェクト。遷移完了時にresolveを実行します。
 		 * @memberOf SceneContainerController
 		 */
-		changeScene : function(param) {
+		navigate: function(param) {
 
 			// TODO(鈴木) paramが文字列の場合は遷移先と見なして再帰呼び出しする
 			if (isString(param)) {
-				return this.changeScene({
-					to : param
+				return this.navigate({
+					to: param
 				});
 			}
 
+			// 渡されたパラメータを覚えておく
+			// シーン遷移後のコールバックで使用し、_navigateEndが終わったら破棄する
+			this._navigateParam = param;
+
 			param = $.extend(true, {}, param);
 
-			var to = param.to;
-
-			this._transition = this._createTransition(param.transition);
+			this._transition = new defaultTransitionController();
 
 			// TODO(鈴木) シーンコンテナ下はコントローラーを管理
 			var fromElm = (this._currentController || {}).rootElement;
@@ -23568,51 +28981,93 @@ var h5internal = {
 
 			var dfd = this._dfd = h5.async.deferred();
 
-			// TODO(鈴木) changeScene経由で_changeSceneを実行したか否か
+			// TODO(鈴木) navigate経由で_navigateを実行したか否か
 			this._isNavigated = true;
 
-			if (this.isMain) {
+			var to = param.to;
 
-				// TODO(鈴木) メインシーンコンテナで遷移先がHTML(コントローラーでない)の場合は
-				// paramからtoを削除(URLに余計な情報を残さないため)
-				if (!controllerRegexp.test(to)) {
-					delete param.to;
-				}
+			if (this.isMain && param.navigationType !== NAVIGATION_TYPE.SILENT) {
+
+				// TODO(鈴木) メインシーンコンテナで、URL変更を伴う場合
 
 				if (!isString(to)) {
-					// シーン遷移先に文字列以外を指定されたらエラー
-					throwFwError(ERR_CODE_CHANGE_SCENE_TO_IS_NOT_STRING, [ to ]);
+					// TODO(鈴木) シーン遷移先に文字列以外を指定されたらエラー
+					throwFwError(ERR_CODE_CHANGE_SCENE_TO_IS_NOT_STRING, [to]);
 				}
+
 				if (to.indexOf('#') !== -1) {
-					// シーン遷移先にハッシュを指定されたらエラー
-					throwFwError(ERR_CODE_CHANGE_SCENE_HASH_IN_TO, [ to ]);
-				}
-				if (controllerRegexp.test(to)) {
-					// メインシーンコンテナで遷移先にコントローラーを指定されたらエラー(暫定)
-					throwFwError(ERR_CODE_MAIN_CHANGE_SCENE_TO_IS_CONTROLLER,
-							[ to ]);
+					// TODO(鈴木) シーン遷移先にハッシュを指定されたらエラー
+					throwFwError(ERR_CODE_CHANGE_SCENE_HASH_IN_TO, [to]);
 				}
 
-				/*if(this.isInit){ // TODO(鈴木) 初期表示シーンの場合はURL連動しない。*/
-					// TODO(鈴木) パラメータをエンコードしてURLに付加
-					// ※現在シリアライズ方式検討中のため、パラメータの付加はしない
-					// to += ((to.indexOf('?') === -1) ? '?' : '&') +
-					// $.param(param);
-					pushState(null, null, toAbsoluteUrl(to));
-				/*}*/
+				if (param.method === METHOD.POST) {
+					this._detour.serverArgs = param.serverArgs;
+					delete param.serverArgs;
+				}
 
-				// TODO(鈴木) URLから遷移したいが、↑のためパラメータが付加されていないので、
-				// 直接_changeSceneを呼ぶ。
-				// onPopState();
-				this._changeScene(to, h5.u.obj.deserialize(h5.u.obj
-						.serialize(param)));
+				if (param.navigationType === NAVIGATION_TYPE.ONCE || param.method === METHOD.POST) {
+					this._detour.args = h5.u.obj.deserialize(h5.u.obj.serialize(param.args));
+					delete param.args;
+				}
+
+				var replaceHistory = param.replaceHistory;
+				delete param.replaceHistory;
+
+				var url = convertParamToUrl(param);
+
+				// 現URLと次のURLが同一の場合は処理しないほうがよいか。。
+				// 処理した場合、履歴は積まれないので、アニメーション的に遷移したとみなされるようなものはしないほうがいい。
+				//				if (this._router.compareUrl(url)) {
+				//					this._dfd.resolve({
+				//						from : fromElm,
+				//						to : null
+				//					});
+				//					// インジケーター消すだけ用のイベント作らないといけない。。
+				//					this._transition.onChangeEnd(this.rootElement, fromElm);
+				//					this._isNavigated = false;
+				//					this._dfd = null;
+				//					this._transition = null;
+				//					return;
+				//				}
+
+				this._router.navigate(url, {
+					replaceHistory: replaceHistory
+				});
 
 			} else {
-				this._changeScene(to, h5.u.obj.deserialize(h5.u.obj
-						.serialize(param)));
+
+				// TODO(鈴木) URL変更を伴わない場合
+
+				var url = convertParamToUrl(param);
+				this._router.evaluate(url, {
+					container: this
+				});
 			}
 
 			return dfd.promise();
+		},
+
+		/**
+		 * 現在のシーンのタイトルの設定
+		 *
+		 * @memberOf SceneContainerController
+		 * @param {string} title タイトル文字列
+		 */
+		setTitle: function(title) {
+			this._title = title;
+			if (this.followTitle) {
+				document.title = title;
+			}
+		},
+
+		/**
+		 * 現在のシーンのタイトルの取得
+		 *
+		 * @memberOf SceneContainerController
+		 * @returns {string} 現在のシーンのタイトル
+		 */
+		getTitle: function() {
+			return this._title;
 		},
 
 		/**
@@ -23623,16 +29078,20 @@ var h5internal = {
 		 * @param to
 		 * @param param
 		 */
-		_changeScene : function(to, param) {
+		_navigate: function(to, param) {
+
+			if (!to) {
+				return;
+			}
 
 			param = param || {};
 
 			// TODO(鈴木) シーンコンテナ下はコントローラーを管理
 			var fromElm = (this._currentController || {}).rootElement;
 
-			// changeSceneメソッド経由でない場合
+			// navigateメソッド経由でない場合
 			if (!this._isNavigated) {
-				this._transition = this._createTransition(param.transition);
+				this._transition = new defaultTransitionController();
 				this._transition.onChangeStart(this.rootElement, fromElm);
 			}
 
@@ -23642,6 +29101,26 @@ var h5internal = {
 			}
 
 			var that = this;
+
+			var args = null;
+			if (param.navigationType === NAVIGATION_TYPE.ONCE || param.method === METHOD.POST) {
+				if (!this._isNavigated) {
+					this._onNotReshowable(param);
+					return;
+				}
+				args = this._detour.args;
+				delete this._detour.args;
+			} else {
+				args = param.args;
+			}
+
+			var serverArgs = null;
+			if (param.method === METHOD.POST) {
+				serverArgs = this._detour.serverArgs;
+				delete this._detour.serverArgs;
+			} else {
+				serverArgs = param.serverArgs;
+			}
 
 			// TODO(鈴木) transitionをコントローラーからFunctionに変更
 
@@ -23656,61 +29135,47 @@ var h5internal = {
 			// (現状はコンテナ以下をそのまま入れている。コンテナ内にDOM的にシーンが複数あるケースは未対応)
 
 			if (isString(to)) {
-
 				if (controllerRegexp.test(to)) {
 
-					// TODO(鈴木)
-					loadController(to, $('<div></div>'), param.args).done(
-							function(toController) {
-								that._onLoadController(toController, fromElm);
-							});
+					// TODO(鈴木) 遷移先指定がコントローラーの__name属性の場合
+					loadController(to, $('<div></div>'), args).done(function(toController) {
+						that._navigateEnd(toController, param);
+					});
 
 				} else {
-					// TODO(鈴木) HTMLの対象部分抽出はloadContentsFromUrlに実装。
-					// 1.2.0では、URLにパラメーターを保存しないため、メインシーンコンテナの場合はcontainer指定は無効とする
-					var loadPromise = loadContents(to,
-							(!this.isMain) ? param.container : null);
 
-					loadPromise.done(
-							function(toElm) {
-								// TODO(鈴木) DATA属性に基づいてコントローラーバインド・コンテナ生成
-								// TODO(鈴木) scan用にダミーのDIVにappend
-								scanForContainer(
-										$('<div></div>').append(toElm), null,
-										param.args).done(
-										function(toController) {
-											that._onLoadController(
-													toController, fromElm);
-										});
+					// TODO(鈴木) 遷移先指定がHTMLの場合
 
-							}).fail(function(xhr) {
+					var loadPromise = loadContents(to, param.method, serverArgs);
+
+					function callback(toElm) {
+
+						// TODO(鈴木)
+						// DATA属性に基づいてコントローラーバインド・コンテナ生成
+						// TODO(鈴木) scan用にダミーのDIVにappend
+						scanForContainer($('<div></div>').append(toElm), null, args).done(
+								function(toController) {
+									that._navigateEnd(toController, param);
+								});
+
+					}
+
+					loadPromise.done(callback).fail(function(xhr) {
 
 						// シーン遷移先HTMLのロードに失敗
-						throwFwError(ERR_CODE_HTML_LOAD_FAILED, [ to ], xhr);
+						throwFwError(ERR_CODE_HTML_LOAD_FAILED, [to], xhr);
 
 					});
 				}
+
+			} else if (to.__name && controllerRegexp.test(to.__name)) {
+
+				// TODO(鈴木) 遷移先指定がコントローラーの場合
+
+				that._navigateEnd(to, param);
+
 			}
 
-		},
-
-		/**
-		 * 遷移効果登録
-		 *
-		 * @private
-		 * @memberOf SceneContainerController
-		 * @param type
-		 */
-		_createTransition : function(type) {
-			var Transition = transitionTypeMap[type != null ? type
-					: DEFAULT_SCENE_TRANSITION_TYPE];
-
-			if (!Transition) {
-				// 指定された遷移効果が存在しない場合はエラー
-				throwFwError(ERR_CODE_TRANSITION_NOT_FOUND, [ type ]);
-			}
-
-			return new Transition();
 		},
 
 		/**
@@ -23719,30 +29184,54 @@ var h5internal = {
 		 * @private
 		 * @memberOf SceneContainerController
 		 * @param toController
-		 * @param fromElm
+		 * @param param
 		 */
-		_onLoadController : function(toController, fromElm) {
+		_navigateEnd: function(toController, param) {
 
 			var that = this;
 
+			var fromElm = (this._currentController || {}).rootElement;
+
 			var toElm = toController.rootElement;
 
-			this._transition.onChange(this.rootElement, toElm).done(function() {
+			that._currentController = toController;
+
+			// タイトルを決定する
+			var title = param && param.title;
+			if (title == null) {
+				// 指定無しの場合
+				var isController = this._navigateParam
+						&& controllerRegexp.test(this._navigateParam.to);
+				if (isController && toController[CONTROLLER_SCENE_TITLE] != null) {
+					// 遷移先指定がコントローラの場合、プロパティから取得
+					this.setTitle(toController[CONTROLLER_SCENE_TITLE]);
+				} else {
+					// 遷移先指定がコントローラでない場合(=ページURLの場合)は表示されている要素から設定
+					var title = this._getTitleFromCurrentScene();
+					if (title != null) {
+						this.setTitle(title);
+					}
+				}
+			} else {
+				this.setTitle(title);
+			}
+
+			this._navigateParam = null;
+
+			this._transition.onChange(this.rootElement, toElm).done(this.own(function() {
 
 				// TODO(鈴木) disposeのタイミングはどうすべきか・・
 
 				if (this._dfd) {
 					this._dfd.resolve({
-						from : fromElm,
-						to : toElm
+						from: fromElm,
+						to: toElm
 					});
 				}
 
 				if (fromElm) {
 					$(fromElm).remove();
 				}
-
-				that._currentController = toController;
 
 				// TODO(鈴木) インジケータ非表示
 				that._transition.onChangeEnd(that.rootElement, fromElm, toElm);
@@ -23751,9 +29240,126 @@ var h5internal = {
 				that._dfd = null;
 				that._transition = null;
 
-			});
-		}
+			}));
+		},
 
+		/**
+		 * 現在表示されているシーン要素からタイトルを抽出して設定する
+		 *
+		 * @private
+		 * @memberOf SceneContainerController
+		 * @returns {string|undefined} シーン要素から取得したタイトル文字列(未定義の場合はundefined)
+		 */
+		_getTitleFromCurrentScene: function() {
+			var elm = this._currentController.rootElement;
+			var dataTitle = $(elm).data(DATA_H5_SCENE_TITLE);
+			if (dataTitle != null) {
+				// data-h5-scene-title指定
+				return dataTitle;
+			}
+			// titleタグ
+			var $title = $(elm).find('title');
+			if ($title.length) {
+				return $title.text();
+			}
+		},
+
+		/**
+		 * シーン再表示不可時処理
+		 *
+		 * @private
+		 * @memberOf SceneContainerController
+		 * @param {Object} param
+		 */
+		_onNotReshowable: function(param) {
+			if (notReshowable.__name && controllerRegexp.test(notReshowable.__name)) {
+
+				// TODO(鈴木) notReshowable指定がコントローラーの場合
+
+				var notReshowableController = h5internal.core.controllerInternal($('<div></div>'),
+						notReshowable, {
+							_notReshowableMessage: notReshowableMessage
+						});
+				this._navigateEnd(notReshowableController, param);
+
+			} else {
+
+				// TODO(鈴木) notReshowable指定がコントローラー以外の場合
+
+				var navigateParam = null;
+				if (isString(notReshowable)) {
+					navigateParam = {
+						to: notReshowable
+					};
+				} else {
+					navigateParam = $.extend(true, {}, notReshowable);
+				}
+				navigateParam.args = navigateParam.args || {};
+				navigateParam.args._notReshowableMessage = notReshowableMessage;
+				this._navigate(navigateParam.to, navigateParam);
+			}
+		},
+
+		/**
+		 * Router用デフォルトコールバック
+		 * <p>
+		 * </p>
+		 *
+		 * @private
+		 * @memberOf SceneContainerController
+		 * @param {String} url
+		 */
+		_defaultFuncForRouter: function(url) {
+			var that = this;
+			var param = getParamFromUrl(url);
+			var to = param.to;
+
+			// TODO(鈴木) メインシーンコンテナかつ初回表示時
+			if (this.isMain && this._first) {
+
+				// TODO(鈴木) シーン遷移タイプが'once'(一回のみ)、またはAjaxメソッドタイプが'post'の場合、
+				// 再表示不可エラー画面を表示する。
+				if (param.navigationType === NAVIGATION_TYPE.ONCE || param.method === METHOD.POST) {
+					this._onNotReshowable(param);
+					this._first = false;
+					return;
+				}
+
+				var isController = to && controllerRegexp.test(to);
+				var useHash = urlHistoryActualMode === URL_HISTORY_ACTUAL_MODE.HASH
+						&& location.hash.substring(1);
+				var converted = !this._router.compareUrl(url);
+
+				// TODO(鈴木) 初回読み込みでHTMLの場合でURLそのまま使用する場合は、
+				// 単にscanForContainerする。
+				if (!converted && !useHash && !isController) {
+					function callback(controller) {
+						that._currentController = controller;
+						that._transition
+								.onChangeEnd(that.rootElement, null, controller.rootElement);
+						that._transition = null;
+
+						// タイトルの設定
+						var title = that._getTitleFromCurrentScene();
+						if (title != null) {
+							that.setTitle(title);
+						}
+					}
+					scanForContainer(this.rootElement, null, param.args).done(callback);
+					this._first = false;
+					return;
+				}
+
+			}
+
+			to = to || location.pathname + location.search;
+			to = clearParam(to);
+			if (this._first) {
+				this._navigated = true;
+			}
+			this._navigate(to, param);
+			this._first = false;
+		}
 	};
 
 	/**
@@ -23761,17 +29367,17 @@ var h5internal = {
 	 *
 	 * @memberOf h5.scene
 	 * @param {Element} element シーンコンテナ生成対象要素。
-	 * @param {Boolean} [isMain=false]
-	 *            メインシーンコンテナとするか否か。
+	 * @param {Boolean} [isMain=false] メインシーンコンテナとするか否か。
 	 *            <dl>
-	 *            <dt>メインシーンコンテナとする<dt><dd>true</dd>
-	 *            <dt>メインシーンコンテナとしない</dt><dd>false(デフォルト)</dd>
+	 *            <dt>メインシーンコンテナとする
+	 *            <dt>
+	 *            <dd>true</dd>
+	 *            <dt>メインシーンコンテナとしない</dt>
+	 *            <dd>false(デフォルト)</dd>
 	 *            </dl>
 	 * @returns {SceneContainerController} 生成したシーンコンテナのインスタンス。
 	 */
-	function createSceneContainer(element, isMain/*, param*/) {
-
-		// TODO(鈴木) 対象要素配下にコンテナ、またはコントローラーバインド済みの要素がある場合はエラーとすべき
+	function createSceneContainer(element, isMain) {
 
 		// TODO(鈴木) element指定なしの場合はdiv要素を作って設定
 		if (element == null) {
@@ -23783,6 +29389,9 @@ var h5internal = {
 			throwFwError(ERR_CODE_CONTAINER_ALREADY_CREATED);
 		}
 
+		// タイトル追従するかどうか(メインシーンコンテナの場合はデフォルトtrue)
+		// メインシーンコンテナでない場合は追従しない
+		var followTitle = isMain;
 		if (isMain) {
 			if ($(element).is(':not([' + DATA_H5_MAIN_CONTAINER + '])')) {
 				$(element).attr(DATA_H5_MAIN_CONTAINER, DATA_H5_MAIN_CONTAINER);
@@ -23791,15 +29400,15 @@ var h5internal = {
 			if ($(element).is(':not([' + DATA_H5_CONTAINER + '])')) {
 				$(element).attr(DATA_H5_CONTAINER, DATA_H5_CONTAINER);
 			}
+			followTitle = h5.settings.scene.followTitle;
 		}
 
-		var container = h5internal.core.controllerInternal(element,
-				SceneContainerController, {
-					isMain : isMain
-					/*initialSceneInfo : param*/
-				}, {
-					async : false
-				});
+		var container = h5internal.core.controllerInternal(element, SceneContainerController, {
+			isMain: isMain,
+			followTitle: followTitle
+		}, {
+			async: false
+		});
 
 		$(element).attr(DATA_H5_DYN_CONTAINER_BOUND, DATA_H5_DYN_CONTAINER_BOUND);
 
@@ -23827,7 +29436,7 @@ var h5internal = {
 	 * @memberOf h5.scene
 	 * @returns {SceneContainerController} メインシーンコンテナのインスタンス。未作成の場合はnull。
 	 */
-	function getMainContainer() {
+	function getMainSceneContainer() {
 		return mainContainer;
 	}
 
@@ -23835,60 +29444,44 @@ var h5internal = {
 	 * 指定要素およびその配下のシーンコンテナを取得します
 	 *
 	 * @memberOf h5.scene
-	 * @param {Element}
-	 *            [rootElement=document.body]
-	 *            走査先頭要素。指定しない場合はドキュメント全体を対象とします。
+	 * @param {DOM|jQuery|stroing} [rootElement=document.body]
+	 *            走査先頭要素。要素またはセレクタを指定します。指定しない場合はドキュメント全体を対象とします。
+	 * @param {boolean} [option.deep=true] 子孫要素にバインドされているコントローラも含めるかどうか(デフォルトは含める)
 	 * @returns {SceneContainerController[]} シーンコンテナの配列。
 	 */
-	function getAllSceneContainers(rootElement) {
-
-		var containers = h5.core.controllerManager.getControllers(rootElement || document.body, {
+	function getSceneContainers(rootElement, option) {
+		return h5.core.controllerManager.getControllers(rootElement || document.body, {
 			name: SceneContainerController.__name,
-			deep: true
+			deep: option && option.deep === false ? false : true
 		});
-
-		return containers;
-
 	}
 
 	/**
-	 * シーンコンテナを取得します。
+	 * シーンコンテナを取得します
+	 * <p>
+	 * 第1引数に取得対象とする要素のdata-h5-scene-container属性まはたdata-h5-main-scene-container属性の値を文字列で指定します。該当する要素に対応するシーンコンテナを返します。
+	 * </p>
 	 *
 	 * @memberOf h5.scene
-	 * @param {String|Element}
-	 *            nameOrElement 文字列、要素が指定できます。
-	 *            <dl>
-	 *            <dt>文字列の場合</dt>
-	 *            <dd>取得対象とする要素のdata-h5-container属性まはたdata-h5-main-container属性の値とみなし、その要素に対応するシーンコンテナを返却します。</dd>
-	 *            <dt>要素の場合</dt>
-	 *            <dd>その要素に対応するシーンコンテをを返却します。</dd>
-	 *            </dl>
-	 *            <p>いずれの場合も、該当がない場合はnullを返却します。</p>
-	 * @returns {SceneContainerController} シーンコンテナ
+	 * @param {String} name
+	 *            取得対象とする要素のdata-h5-scene-container属性まはたdata-h5-main-scene-container属性の値を文字列で指定します。
+	 * @returns {SceneContainerController} 該当するシーンコンテナ。ない場合はnullを返します。
 	 */
-	function getSceneContainer(nameOrElement) {
+	function getSceneContainerByName(name) {
 
-		if (nameOrElement == null)
-			return null;
-
-
-		var name = null, element = null;
-
-		if (isString(nameOrElement)) {
-			name = nameOrElement;
-		}else{
-			element = nameOrElement;
-		}
-
-		var containers = getAllSceneContainers(element);
-
-		if(containers.length === 0){
+		if (name == null) {
 			return null;
 		}
 
-		if(name){
-			for(var i = 0; i < containers.length; i++){
-				if(containers[i]._containerName === name){
+		var containers = getSceneContainers();
+
+		if (containers.length === 0) {
+			return null;
+		}
+
+		if (name) {
+			for (var i = 0; i < containers.length; i++) {
+				if (containers[i]._containerName === name) {
 					return containers[i];
 				}
 			}
@@ -23899,50 +29492,116 @@ var h5internal = {
 
 	}
 
-	/**
-	 * シーン遷移イベントを発行します。
-	 *
-	 * @param {String|Object}
-	 *            data
-	 * @memberOf Controller
-	 */
-	function triggerSceneChange(data) {
-		this.trigger(EVENT_SCENE_CHANGE_REQUEST, data);
-	}
-
-	/**
-	 * このコントローラを直接包含しているシーンコンテナを取得します。
-	 *
-	 * <p>
-	 * シーンコンテナ要素が存在しない、またはシーンコンテナ未生成の場合はnullを返却します。
-	 * </p>
-	 *
-	 * @returns {SceneContainerController} シーンコンテナ
-	 * @memberOf Controller
-	 */
-	function getParentSceneContainer() {
-		var element = getParentContainer(this.rootElement);
-		if (!element) {
-			return null;
-		}
-		return getSceneContainer(element);
-	}
-
 	// =============================
 	// Code on boot
 	// =============================
 
-	if (h5internal.core.controllerConstructor) {
-		// Controllerのコンストラクタがあれば、sceneモジュール用の関数を追加
-		h5internal.core.controllerConstructor.prototype.triggerSceneChange = triggerSceneChange;
-		h5internal.core.controllerConstructor.prototype.getParentSceneContainer = getParentSceneContainer;
-	}
+	// フック
+	h5internal.core.addControllerInstantiationHook(function(c) {
+		// TODO controllerがすでにsceneプロパティを持っていたらエラーでよいか
+		/**
+		 * シーン操作に関するモジュール
+		 * <p>
+		 * コントローラ化の際に、コントローラに"scene"プロパティが追加されます。
+		 * </p>
+		 * <p>
+		 * 使用方法については{@link Scene}をご覧ください。
+		 * </p>
+		 *
+		 * @memberOf Controller
+		 * @type Scene
+		 * @name scene
+		 */
+		c.scene = new Scene(c);
+	});
 
-	// TODO autoInitがtrueの場合のみinit
-	// TODO(鈴木) 暫定。とりあえず設定を有効化しました
-	h5.settings.scene = h5.settings.scene || {};
 	$(function() {
-		// TODO(鈴木) autoInit=trueの場合に全体を探索し、DATA属性によりコントローラーバインドとシーンコンテナ生成を行う。
+
+		// シーン遷移パラメーター識別用プレフィクス
+		clientQueryStringPrefix = h5.settings.scene.clientQueryStringPrefix;
+
+		//  正規表現用文字列作成
+		clientQueryStringPrefixForRegExp = clientQueryStringPrefix.replace(/\\/g, '\\\\');
+
+		// シーン遷移パラメーター識別用プレフィクス(FW用)
+		clientFWQueryStringPrefix = h5.settings.scene.clientFWQueryStringPrefix;
+
+		// 正規表現用文字列作成
+		clientFWQueryStringPrefixForRegExp = clientFWQueryStringPrefix.replace(/\\/g, '\\\\');
+
+		// メインシーンコンテナURL履歴保持方法
+		urlHistoryMode = h5.settings.scene.urlHistoryMode;
+
+		// シーン遷移先URL最大長
+		urlMaxLength = parseInt(h5.settings.scene.urlMaxLength);
+
+		//  再表示不可画面
+		notReshowable = NotReshowableController;
+
+		// ベースURL
+		baseUrl = h5.settings.scene.baseUrl;
+
+		// TODO(鈴木) h5.settings.scene.routesからルーティングテーブルマージ
+		var routes = [];
+		if (h5.settings.scene.routes) {
+			routes = routes.concat(h5.settings.scene.routes);
+		}
+
+		// TODO(鈴木) シーン用ルーティングテーブルをRouter用に変換。
+		var routesForRouter = $.map(routes, function(route) {
+			var test = route.test;
+			if (isFunction(test)) {
+				var _test = test;
+				test = function(url) {
+					var param = getParamFromUrl(url);
+					return _test(url, param);
+				};
+			}
+			return {
+				test: test,
+				func: function(url, contextualData) {
+					contextualData = contextualData || {};
+					var navigationInfo = route.navigationInfo;
+					if (isFunction(navigationInfo)) {
+						var param = getParamFromUrl(url);
+						navigationInfo = navigationInfo(url, param);
+					}
+					if (navigationInfo == null) {
+						var container = contextualData.container || mainContainer;
+						container._defaultFuncForRouter(url);
+						return null;
+					}
+					if (isString(navigationInfo)) {
+						navigationInfo = {
+							to: navigationInfo
+						};
+					}
+					var result = convertParamToUrl(navigationInfo);
+					return result;
+				}
+			};
+		});
+
+		// TODO(鈴木) デフォルト動作用定義追加。
+		routesForRouter.push({
+			test: /.*/,
+			func: function(url, contextualData) {
+				contextualData = contextualData || {};
+				var container = contextualData.container || mainContainer;
+				container._defaultFuncForRouter(url);
+			}
+		});
+
+		// TODO(鈴木) Routerインスタンス生成
+		router = new Router({
+			routes: routesForRouter,
+			urlHistoryMode: urlHistoryMode,
+			baseUrl: baseUrl,
+			urlMaxLength: urlMaxLength
+		});
+
+
+		// autoInit=trueの場合に全体を探索し、DATA属性によりコントローラーバインドとシーンコンテナ生成を行う。
 		if (h5.settings.scene.autoInit) {
 			init();
 		}
@@ -23957,466 +29616,18 @@ var h5internal = {
 	 * @memberOf h5
 	 */
 	h5.u.obj.expose('h5.scene', {
-		openWindow : openWindow,
-		createSceneContainer : createSceneContainer,
-		init : init,
-		getMainContainer : getMainContainer,
-		scan : scan,
-		getAllSceneContainers : getAllSceneContainers,
-		getSceneContainer : getSceneContainer
+		openWindow: openWindow,
+		createSceneContainer: createSceneContainer,
+		init: init,
+		getMainSceneContainer: getMainSceneContainer,
+		getSceneContainers: getSceneContainers,
+		getSceneContainerByName: getSceneContainerByName,
+		navigationType: NAVIGATION_TYPE,
+		method: METHOD,
+		urlHistoryMode: URL_HISTORY_MODE
 	});
 
 })();
-/* del begin */
-/* ------ h5.dev.api.geo ------ */
-(function() {
-	// =========================================================================
-	//
-	// Constants
-	//
-	// =========================================================================
-
-	// =============================
-	// Production
-	// =============================
-
-	// =============================
-	// Development Only
-	// =============================
-
-
-	// =========================================================================
-	//
-	// Cache
-	//
-	// =========================================================================
-	// =========================================================================
-	//
-	// Privates
-	//
-	// =========================================================================
-
-	// =============================
-	// Variables
-	// =============================
-
-	/**
-	 * 元のh5.api.geo
-	 *
-	 * @private
-	 */
-	var originalAPI = {};
-
-	/**
-	 * _watchPositionで作られたdeferredオブジェクトの配列
-	 *
-	 * @private
-	 * @type deferred[]
-	 */
-	var _dfds = [];
-	/**
-	 * _watchPositionで作られたdeferredオブジェクトに割り当てるID
-	 *
-	 * @private
-	 * @type Number
-	 */
-	var _dfdID = 0;
-	/**
-	 * _watchPositionで使用するsetInterval()のタイマーID
-	 *
-	 * @private
-	 * @type Number
-	 */
-	var _timerID = null;
-	/**
-	 * _watchPositionがデバッグ用位置情報の何番目を見ているかを設定します。
-	 *
-	 * @private
-	 * @type Number
-	 */
-	var _watchPointer = 0;
-
-	// =============================
-	// Functions
-	// =============================
-	/**
-	 * 以下の構造の位置情報オブジェクトを生成します<br>
-	 * <p>
-	 * <table border="1">
-	 * <tr>
-	 * <td>プロパティ名</td>
-	 * <td>説明</td>
-	 * </tr>
-	 * <tr>
-	 * <td>latitude</td>
-	 * <td>緯度</td>
-	 * </tr>
-	 * <tr>
-	 * <td>longitude</td>
-	 * <td>経度</td>
-	 * </tr>
-	 * <tr>
-	 * <td>accuracy</td>
-	 * <td>位置の誤差(m)</td>
-	 * </tr>
-	 * <tr>
-	 * <td>altitude</td>
-	 * <td>高度(m)</td>
-	 * </tr>
-	 * <tr>
-	 * <td>altitudeAccuracy</td>
-	 * <td>高度の誤差(m)</td>
-	 * </tr>
-	 * <tr>
-	 * <td>heading</td>
-	 * <td>方角(0～360)(度)</td>
-	 * </tr>
-	 * <tr>
-	 * <td>speed</td>
-	 * <td>速度 (m/s)</td>
-	 * </tr>
-	 * <tr>
-	 * <td>timestamp</td>
-	 * <td>時刻</td>
-	 * </tr>
-	 * </table>
-	 *
-	 * @memberOf h5.dev.api.geo
-	 * @private
-	 * @params {Object} dummyPosition dummyPositionsに格納されたオブジェクト
-	 * @returns {Object} 位置情報オブジェクト
-	 * @type Object[]
-	 */
-	function createPosition(params) {
-		var param = params || {};
-		param.timestamp = param.timestamp || new Date().getTime();
-		var coords = param.coords ? param.coords : param;
-		param.coords = {
-			latitude: coords.latitude || 0,
-			longitude: coords.longitude || 0,
-			accuracy: coords.accuracy || 0,
-			altitude: coords.altitude || null,
-			altitudeAccuracy: coords.altitudeAccuracy || null,
-			heading: coords.heading || null,
-			speed: coords.speed || null
-		};
-		return param;
-	}
-
-	// =========================================================================
-	//
-	// Body
-	//
-	// =========================================================================
-
-	// originalAPI に 元のgetCurrentPositionとwatchPositionをとっておく
-	originalAPI.getCurrentPosition = h5.api.geo.getCurrentPosition;
-	originalAPI.watchPosition = h5.api.geo.watchPosition;
-
-	/**
-	 * ※この関数はh5.dev.jsを読み込んだ場合のみ利用可能です。開発支援用機能のため、最終リリース物にh5.dev.jsやデバッグコードが混入しないよう十分ご注意ください。<br>
-	 * dummyPosiitonsへ位置情報オブジェクトを格納して使用してください。位置情報はcreatePosition()で作成することができます。
-	 *
-	 * @memberOf h5.dev.api
-	 * @name geo
-	 * @namespace
-	 */
-	var h5GeolocationSupport = {
-		/**
-		 * 強制的にロケーションの取得に失敗させるかどうか
-		 *
-		 * @memberOf h5.dev.api.geo
-		 * @type Boolean
-		 */
-		forceError: false,
-		/**
-		 * _watchPositionの座標の送信間隔(ms)
-		 *
-		 * @memberOf h5.dev.api.geo
-		 * @type Number
-		 */
-		watchIntervalTime: 1000,
-		/**
-		 * デバッグ用位置情報
-		 * <p>
-		 * 位置情報オブジェクトを格納する配列です。 以下のようなオブジェクトを格納してください。
-		 * </p>
-		 * <table class="params" style=""><thead>
-		 * <tr>
-		 * <th>Name</th>
-		 * <th>Type</th>
-		 * <th>Argument</th>
-		 * <th class="last">Description</th>
-		 * </tr>
-		 * </thead><tbody>
-		 * <tr>
-		 * <td class="name"><code>coords</code></td>
-		 * <td class="type"> Object </td>
-		 * <td class="attributes"></td>
-		 * <td class="description last">
-		 * <h6>Properties</h6>
-		 * <table class="params"><thead>
-		 * <tr>
-		 * <th>Name</th>
-		 * <th>Type</th>
-		 * <th>Argument</th>
-		 * <th>Default</th>
-		 * <th class="last">Description</th>
-		 * </tr>
-		 * </thead><tbody>
-		 * <tr>
-		 * <td class="name"><code>latitude</code></td>
-		 * <td class="type"> Number </td>
-		 * <td class="attributes"> &lt;optional&gt;<br>
-		 * </td>
-		 * <td class="default"> 0 </td>
-		 * <td class="description last">緯度</td>
-		 * </tr>
-		 * <tr>
-		 * <td class="name"><code>longitude</code></td>
-		 * <td class="type"> Number </td>
-		 * <td class="attributes"> &lt;optional&gt;<br>
-		 * </td>
-		 * <td class="default"> 0 </td>
-		 * <td class="description last">経度</td>
-		 * </tr>
-		 * <tr>
-		 * <td class="name"><code>accuracy</code></td>
-		 * <td class="type"> Number </td>
-		 * <td class="attributes"> &lt;optional&gt;<br>
-		 * </td>
-		 * <td class="default"> 50 </td>
-		 * <td class="description last">位置の誤差(m)</td>
-		 * </tr>
-		 * <tr>
-		 * <td class="name"><code>altitude</code></td>
-		 * <td class="type"> Number </td>
-		 * <td class="attributes"> &lt;optional&gt;<br>
-		 * </td>
-		 * <td class="default"> null </td>
-		 * <td class="description last">高度(m)</td>
-		 * </tr>
-		 * <tr>
-		 * <td class="name"><code>altitudeAccuracy</code></td>
-		 * <td class="type"> Number </td>
-		 * <td class="attributes"> &lt;optional&gt;<br>
-		 * </td>
-		 * <td class="default"> null </td>
-		 * <td class="description last">高度の誤差(m)</td>
-		 * </tr>
-		 * <tr>
-		 * <td class="name"><code>heading</code></td>
-		 * <td class="type"> Number </td>
-		 * <td class="attributes"> &lt;optional&gt;<br>
-		 * </td>
-		 * <td class="default"> null </td>
-		 * <td class="description last">方角(0～360)(度)</td>
-		 * </tr>
-		 * <tr>
-		 * <td class="name"><code>speed</code></td>
-		 * <td class="type"> Number </td>
-		 * <td class="attributes"> &lt;optional&gt;<br>
-		 * </td>
-		 * <td class="default"> null </td>
-		 * <td class="description last">速度 (m/s)</td>
-		 * </tr>
-		 * </tbody></table></td>
-		 * </tr>
-		 * <tr>
-		 * <td class="name"><code>timestamp</code></td>
-		 * <td class="type"> Number </td>
-		 * <td class="attributes"> &lt;optional&gt;<br>
-		 * </td>
-		 * <td class="description last">タイムスタンプ。省略時は取得時のタイムスタンプが自動で格納されます。</td>
-		 * </tr>
-		 * </tbody></table> <br>
-		 * <br>
-		 *
-		 * <pre>
-		 * 	例１．
-		 * 	h5.api.geo.dummyPositions.push({
-		 * 		coords:{
-		 * 			latitude: 35.45019435393257,
-		 * 			longitude: 139.6305128879394,
-		 * 			accuracy: 50,
-		 * 			altitude: 100,
-		 * 			altitudeAccuracy: 100,
-		 * 			heading: 90,
-		 * 			speed: 9
-		 * 		}
-		 * 	timestamp: 1331106454545
-		 * 	})
-		 * </pre>
-		 *
-		 * <p>
-		 * 省略したプロパティにはdefault値が入ります。timestampを省略すると、取得時に値が格納されます。
-		 * </p>
-		 *
-		 * <pre>
-		 * 	例２．
-		 * 	h5.api.geo.dummyPositions.push({
-		 * 		coords: {
-		 * 			latitude: 35.45019435393257,
-		 * 			longitude: 139.6305128879394,
-		 * 		}
-		 * 	})
-		 * </pre>
-		 *
-		 * <p>
-		 * coordsの中身だけを記述して格納することもできます。getPositionや_watchPositionでの取得時にcoordsプロパティに格納して返します。省略したプロパティにはdefault値が入ります。
-		 * timestampには取得時に値が格納されます。
-		 * </p>
-		 *
-		 * <pre>
-		 * 	例３．
-		 * 	h5.api.geo.dummyPositions.push(
-		 * 		latitude: 35.45019435393257,
-		 * 		longitude: 139.6305128879394
-		 * 	})
-		 * </pre>
-		 *
-		 * <p>
-		 * <a href="http://www.htmlhifive.com/ja/recipe/geolocation/index.html">座標データ生成ツール</a>を使うと地図から緯度と経度を求められます。
-		 * </p>
-		 *
-		 * @memberOf h5.dev.api.geo
-		 * @type Object[]
-		 */
-		dummyPositions: []
-	};
-
-	/**
-	 * dummyPositionsの先頭の位置情報を返します。dummyPositionsがオブジェクトの場合はdummyPositionsを返します。
-	 * <p>
-	 * このメソッドはh5.api.geo.getCurrentPosition()で呼びます。※ h5.dev.api.geo.getCurrentPosition()ではありません。
-	 * </p>
-	 * <p>
-	 * dummyPositionsに値が設定されていない場合は元のh5.api.geoのメソッドを実行します。
-	 * </p>
-	 *
-	 * @memberOf h5.dev.api.geo
-	 * @function
-	 * @param {Object} [option] 設定情報
-	 * @param {Boolean} [option.enableHighAccuracy] 正確な位置を取得するか (ただし消費電力の増加や応答が遅延する)
-	 * @param {Number} [option.timeout] 位置情報を取得するまで待機する時間 (ミリ秒)
-	 * @param {Number} [option.maximumAge] キャッシュされた位置情報の有効期間を指定する (ミリ秒)
-	 * @returns {Promise} Promiseオブジェクト
-	 */
-	function getCurrentPosition(option) {
-		var dfd = h5.async.deferred();
-		if (h5.dev.api.geo.forceError) {
-			setTimeout(function() {
-				dfd.reject({
-					code: 'forceError'
-				});
-			}, 0);
-			return dfd.promise();
-		}
-
-		var positions = h5.dev.api.geo.dummyPositions;
-		if (!positions || positions.length === 0) {
-			return originalAPI.getCurrentPosition(option);
-		}
-		// dummyPositionsが配列でない場合も対応する
-		var positionsAry = wrapInArray(positions);
-
-		setTimeout(function() {
-			dfd.resolve(createPosition(positionsAry[0]));
-		}, 0);
-		return dfd.promise();
-	}
-
-	/**
-	 * dummyPositionsの緯度・緯度を順番に返します。 dummyPositionsの末尾まで到達すると、末尾の要素を返し続けます。
-	 * <p>
-	 * このメソッドはh5.api.geo.watchPosition()で呼びます。※ h5.dev.api.geo.watchtPosition()ではありません。
-	 * </p>
-	 * <p>
-	 * dummyPositionsに値が設定されていない場合は元のh5.api.geoのメソッドを実行します。
-	 * </p>
-	 *
-	 * @memberOf h5.dev.api.geo
-	 * @function
-	 * @name watchPosition
-	 * @param {Object} [option] 設定情報
-	 * @param {Boolean} [option.enableHighAccuracy] 正確な位置を取得するか (ただし消費電力の増加や応答が遅延する)
-	 * @param {Number} [option.timeout] 位置情報を取得するまで待機する時間 (ミリ秒)
-	 * @param {Number} [option.maximumAge] キャッシュされた位置情報の有効期間を指定する (ミリ秒)
-	 * @returns {WatchPositionPromise} WatchPositionPromiseオブジェクト
-	 */
-	function watchPosition(option) {
-		var dfd = h5.async.deferred();
-		if (h5.dev.api.geo.forceError) {
-			setTimeout(function() {
-				dfd.reject({
-					code: 'forceError'
-				});
-			}, 0);
-			return dfd.promise();
-		}
-		// dummyPositionsが配列でない場合も対応する
-		var dummyPos = wrapInArray(h5.dev.api.geo.dummyPositions);
-		if (dummyPos.length === 0) {
-			return originalAPI.watchPosition(option);
-		}
-
-		var watchID = _dfdID++;
-		// WatchPositionPromiseクラス
-		// _watchPositionはこのクラスをプロミス化して返す。
-		var WatchPositionPromise = function() {
-		// コンストラクタ
-		};
-		// promiseオブジェクトにunwatchメソッドを付加
-		WatchPositionPromise.prototype = {
-			// unwatchを呼び出したdeferredを_dfds[]から削除
-			unwatch: function() {
-				_dfds[watchID] && _dfds[watchID].resolve();
-				delete _dfds[watchID];
-				setTimeout(function() {
-					// deferredオブジェクトがすべてなくなったらタイマーの停止
-					// dummyPositionsの見ている位置を0に戻す。
-					if ($.isEmptyObject(_dfds)) {
-						clearInterval(_timerID);
-						_timerID = null;
-						_watchPointer = 0;
-					}
-				}, 0);
-			}
-		};
-
-		setTimeout(function() {
-			_dfds[watchID] = dfd;
-			if (_timerID === null) {
-				var intervalFunc = function() {
-					var pos;
-					if (_watchPointer >= dummyPos.length) {
-						pos = dummyPos[dummyPos.length - 1];
-					} else {
-						pos = dummyPos[_watchPointer++];
-					}
-					for ( var id in _dfds) {
-						_dfds[id].notify(createPosition(pos));
-					}
-				};
-				intervalFunc();
-				_timerID = setInterval(intervalFunc, h5.dev.api.geo.watchIntervalTime);
-			}
-		}, 0);
-		return dfd.promise(new WatchPositionPromise(watchID));
-	}
-
-	// =============================
-	// Expose to window
-	// =============================
-
-	// getCurrentPosition と watchPosition を上書きする。
-	$.extend(h5.api.geo, {
-		getCurrentPosition: getCurrentPosition,
-		watchPosition: watchPosition
-	});
-	h5.u.obj.expose('h5.dev.api.geo', h5GeolocationSupport);
-})();
-/* del end */
 
 	/* del begin */
 	var fwLogger = h5.log.createLogger('h5');
