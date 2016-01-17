@@ -1,70 +1,95 @@
 <!doctype html>
 <html>
-<head>
-<meta name="viewport" content="width=device-width">
-<meta charset="UTF-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<head>
+		<meta name="viewport" content="width=device-width">
+		<meta charset="UTF-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-<!-- jquery -->
-<!--[if lt IE 9]>
+		<!-- jquery -->
+		<!--[if lt IE 9]>
 		<script src="../res/lib/jquery/jquery-1.js"></script>
 		<![endif]-->
-<!--[if gte IE 9]><!-->
-<script src="../res/lib/jquery/jquery-2.js"></script>
-<!--<![endif]-->
+		<!--[if gte IE 9]><!-->
+		<script src="../res/lib/jquery/jquery-2.js"></script>
+		<!--<![endif]-->
 
-<!-- bootstrap -->
-<!-- <link href="../res/lib/bootstrap/css/bootstrap.min.css" -->
-<!-- 	rel="stylesheet" media="screen"> -->
-<!-- <script src="../res/lib/bootstrap/js/bootstrap.min.js"></script> -->
-<link href="/hifive-res/ext/bootstrap/3.3.5/css/bootstrap.min.css"
-	rel="stylesheet" media="screen">
-<script src="/hifive-res/ext/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+		<!-- bootstrap -->
+		<link href="../res/lib/bootstrap/css/bootstrap.min.css"
+		rel="stylesheet" media="screen">
+		<script src="../res/lib/bootstrap/js/bootstrap.min.js"></script>
 
-<!-- hifive -->
-<link href="../res/lib/h5/h5.css" rel="stylesheet">
-<script src="../res/lib/h5/ejs-h5mod.js"></script>
-<script src="../res/lib/h5/h5.dev.js"></script>
+		<!-- hifive -->
+		<link href="../res/lib/h5/h5.css" rel="stylesheet">
+		<script src="../res/lib/h5/ejs-h5mod.js"></script>
+		<script src="../res/lib/h5/h5.dev.js"></script>
 
-<!-- user -->
-<link href="maze.css" rel="stylesheet">
-<script src="maze.js"></script>
-<script src="../common/autobind.js"></script>
+		<!-- user -->
+		<link href="maze.css" rel="stylesheet">
+		<script src="maze.js"></script>
+		<script src="../common/autobind.js"></script>
 
-<title>迷路アルゴリズム</title>
-</head>
-<body class="container" data-controller="app.maze.PageController">
-	<div class="row">
-		<h2>迷路経路探索アルゴズム</h2>
-		<div class="col-xs-12">
-			<div class="mazeEdit">
-				<div class="GUIEditor">
-					<div class="mazeEditCtrls form-inline">
-						<div class="form-group">
-							<label>縦</label><input name="rowNum" type="text" value="10"
-								class="form-control" size="1" />
-						</div>
-						<div class="form-group">
-							<label>横</label><input name="colNum" type="text" value="10"
-								class="form-control" size="1" />
-						</div>
-						<button class="btn btn-default">サイズ変更</button>
-					</div>
-				</div>
-				<div class="CUIEditor"></div>
-				<button class="btn btn-default changeEditor">エディタ変更</button>
-			</div>
-		</div>
-	</div>
-	</div>
-	<div class="row">
-
+		<title>迷路アルゴリズム</title>
+	</head>
+	<body class="container" data-controller="app.maze.PageController">
 		<div class="row">
-			<div class="logicCtrls">
-				<button class="btn btn-primary calcMinRoot">最短路計算</button>
-				<button class="btn btn-primary calcMaxRoot">最長路計算</button>
+			<h2>迷路経路探索アルゴズム</h2>
+			<div class="col-xs-12">
+				<div class="mazeEdit">
+					<div class="GUIEditor editor hidden">
+						<div class="mazeEditCtrls form-inline">
+							<div class="form-group">
+								<label>縦</label>
+								<input name="rowNum" type="text" value="10"
+								class="form-control" size="2"/>
+							</div>
+							<div class="form-group">
+								<label>横</label>
+								<input name="colNum" type="text" value="10"
+								class="form-control" size="2" />
+							</div>
+							<div class="mazeView mono"></div>
+							<button class="btn btn-default">
+								サイズ変更
+							</button>
+						</div>
+					</div>
+					<div class="CUIEditor editor">
+						<div class="col-xm-12">
+							<textarea class="form-control mono" rows="10"></textarea>
+							<p>
+								以下、マスの入力方法。全て半角で書くこと。
+							</p>
+							<ul>
+								<li>
+									空白は通れるマス
+								<li>
+									#は通れないマス
+								<li>
+									sは開始位置(スタート)
+								<li>
+									gは終了位置(ゴール)
+								</li>
+							</ul>
+						</div>
+					</div>
+					<button class="btn btn-default changeEditor">
+						エディタ変更
+					</button>
+				</div>
+				<div class="mazeViewer"></div>
 			</div>
 		</div>
-	</div>
-</body>
+		<div class="row">
+			<div class="col-xs-12">
+				<div class="logicCtrls">
+					<button class="btn btn-primary calcMinRoot">
+						最短路計算
+					</button>
+					<button class="btn btn-primary calcMaxRoot">
+						最長路計算
+					</button>
+				</div>
+			</div>
+		</div>
+	</body>
 </html>

@@ -1,27 +1,10 @@
-(function() {
-	var controller = {
-		__name: 'app.maze.PageController',
-		__meta: {
-			CUIEditorController: {
-				rootElement: '.CUIEditor'
-			},
-			GUIEditorController: {
-				rootElement: '.GUIEditor'
-			}
-		}
-	};
-	h5.core.expose(controller);
-})();
-
-(function() {
-	var controller = {
-		__name: 'app.maze.CUIEditorController'
-	};
-	h5.core.expose(controller);
-})();
-(function() {
-	var controller = {
-		__name: 'app.maze.GUIEditorController'
-	};
-	h5.core.expose(controller);
-})();
+@charset "UTF-8";
+.mono {
+	font-family: Consolas, 'Courier New', Courier, Monaco, monospace;
+}
+.mazeView .square {
+	font-size: 2em;
+	padding: 0 2px;
+    border: 1px dashed #ccc;
+	cursor: pointer;
+}
