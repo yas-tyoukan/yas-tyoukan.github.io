@@ -35,33 +35,41 @@
 			<h2>迷路経路探索アルゴズム</h2>
 			<div class="col-xs-12">
 				<div class="mazeEdit">
+					<button class="btn btn-default changeEditor">
+						エディタ変更
+					</button>
 					<div class="GUIEditor editor hidden">
 						<div class="mazeEditCtrls form-inline">
 							<div class="form-group">
 								<label>縦</label>
-								<input name="rowNum" type="text" value="10"
+								<input name="rowNum" type="number" value="10"
 								class="form-control" size="2"/>
 							</div>
 							<div class="form-group">
 								<label>横</label>
-								<input name="colNum" type="text" value="10"
+								<input name="colNum" type="number" value="10"
 								class="form-control" size="2" />
 							</div>
-							<div class="mazeView mono"></div>
-							<button class="btn btn-default">
+							<button class="btn btn-default changeSize">
 								サイズ変更
 							</button>
+							<div class="mazeView mono"></div>
 						</div>
+						<p>
+							クリックで□と■を配置
+						</p>
+						<p>
+							ctrlまたはcommand+クリックでs(スタート)とg(ゴール)の配置
+						</p>
 					</div>
 					<div class="CUIEditor editor">
 						<div class="col-xm-12">
-							<textarea class="form-control mono" rows="10"></textarea>
 							<p>
 								以下、マスの入力方法。全て半角で書くこと。
 							</p>
 							<ul>
 								<li>
-									空白は通れるマス
+									空白(半角)は通れるマス
 								<li>
 									#は通れないマス
 								<li>
@@ -70,11 +78,9 @@
 									gは終了位置(ゴール)
 								</li>
 							</ul>
+							<textarea class="form-control mono" rows="10"></textarea>
 						</div>
 					</div>
-					<button class="btn btn-default changeEditor">
-						エディタ変更
-					</button>
 				</div>
 				<div class="mazeViewer"></div>
 			</div>
@@ -82,10 +88,10 @@
 		<div class="row">
 			<div class="col-xs-12">
 				<div class="logicCtrls">
-					<button class="btn btn-primary calcMinRoot">
+					<button class="btn btn-primary calcRoot" data-method="calcShortestRoot">
 						最短路計算
 					</button>
-					<button class="btn btn-primary calcMaxRoot">
+					<button class="btn btn-primary calcRoot" data-method="calcLongestRoot">
 						最長路計算
 					</button>
 				</div>

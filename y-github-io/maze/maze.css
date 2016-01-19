@@ -3,8 +3,12 @@
 	font-family: Consolas, 'Courier New', Courier, Monaco, monospace;
 }
 .mazeView .square {
-	font-size: 2em;
-	padding: 0 2px;
-    border: 1px dashed #ccc;
+	font-size: 36px;
+	border: 1px dashed #ccc;
 	cursor: pointer;
+	display: inline-block;
+	text-align: center;
+	line-height: 30px;
+	width: 30px;
+	vertical-align: middle;
 }
