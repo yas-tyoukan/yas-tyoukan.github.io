@@ -9,6 +9,17 @@
 	display: inline-block;
 	text-align: center;
 	line-height: 30px;
+	height: 30px;
 	width: 30px;
 	vertical-align: middle;
+}
+
+.rootViewer {
+	position: relative;
+}
+
+.rootViewer .rootView {
+	position: absolute;
+	top: 0;
+	left: 0;
 }

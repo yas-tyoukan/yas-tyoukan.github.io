@@ -4,6 +4,22 @@
 		<meta name="viewport" content="width=device-width">
 		<meta charset="UTF-8">
 		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<!-- トラッキングコード -->
+		<!-- <script>
+		(function(i, s, o, g, r, a, m) {
+		i['GoogleAnalyticsObject'] = r;
+		i[r] = i[r] || function() {
+		(i[r].q = i[r].q || []).push(arguments)
+		}, i[r].l = 1 * new Date();
+		a = s.createElement(o), m = s.getElementsByTagName(o)[0];
+		a.async = 1;
+		a.src = g;
+		m.parentNode.insertBefore(a, m)
+		})(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+
+		ga('create', 'UA-65172741-1', 'auto');
+		ga('send', 'pageview');
+		</script> -->
 
 		<!-- jquery -->
 		<!--[if lt IE 9]>
@@ -17,6 +33,9 @@
 		<link href="../res/lib/bootstrap/css/bootstrap.min.css"
 		rel="stylesheet" media="screen">
 		<script src="../res/lib/bootstrap/js/bootstrap.min.js"></script>
+
+		<!-- preinit -->
+		<script src="preinit.js"></script>
 
 		<!-- hifive -->
 		<link href="../res/lib/h5/h5.css" rel="stylesheet">
@@ -38,16 +57,16 @@
 					<button class="btn btn-default changeEditor">
 						エディタ変更
 					</button>
-					<div class="GUIEditor editor hidden">
+					<div class="GUIEditor editor">
 						<div class="mazeEditCtrls form-inline">
 							<div class="form-group">
 								<label>縦</label>
-								<input name="rowNum" type="number" value="10"
+								<input name="rowNum" type="number" value="6"
 								class="form-control" size="2"/>
 							</div>
 							<div class="form-group">
 								<label>横</label>
-								<input name="colNum" type="number" value="10"
+								<input name="colNum" type="number" value="6"
 								class="form-control" size="2" />
 							</div>
 							<button class="btn btn-default changeSize">
@@ -55,14 +74,14 @@
 							</button>
 							<div class="mazeView mono"></div>
 						</div>
-						<p>
-							クリックで□と■を配置
-						</p>
-						<p>
-							ctrlまたはcommand+クリックでs(スタート)とg(ゴール)の配置
-						</p>
+						<ul>
+							<li>
+								クリックで□と■を配置
+							<li>
+								ctrlまたはcommand+クリックでs(スタート)とg(ゴール)の配置
+						</ul>
 					</div>
-					<div class="CUIEditor editor">
+					<div class="CUIEditor editor hidden">
 						<div class="col-xm-12">
 							<p>
 								以下、マスの入力方法。全て半角で書くこと。
@@ -82,7 +101,13 @@
 						</div>
 					</div>
 				</div>
-				<div class="mazeViewer"></div>
+				<div class="rootViewer hidden">
+					<div class="mazeView mono"></div>
+					<canvas class="rootView"></canvas>
+					<button class="closeRootViewer btn btn-default">
+						結果表示を閉じる
+					</button>
+				</div>
 			</div>
 		</div>
 		<div class="row">
@@ -93,6 +118,9 @@
 					</button>
 					<button class="btn btn-primary calcRoot" data-method="calcLongestRoot">
 						最長路計算
+					</button>
+					<button class="btn btn-primary calcRoot" data-method="calcAllThrouRoot">
+						全マスを通る経路計算(最長路計算の枝刈りあり版)
 					</button>
 				</div>
 			</div>
