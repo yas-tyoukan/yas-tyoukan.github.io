@@ -55,12 +55,14 @@
 					$jscode.val($jscode.val().replace(/#\{location\}/, baseUrl));
 					return;
 				}
-				window.addEventListener("message", function receiveMessage(ev) {
+				window.addEventListener('message', function receiveMessage(ev) {
+					console.log('recieved');
 					var rankData = JSON.parse(ev.data);
 					console.log(rankData);
 					$('.rank').text(ev.data);
 				}, false);
-				window.opener.postMessage('requestRank', 'https://splatoon.nintendo.net');			
+				window.opener.postMessage('requestRank', 'https://splatoon.nintendo.net');	
+				console.log('posted');		
 			});
 		</script>
 		<title>SPRV (Splatoon Painted Rank View)</title>
