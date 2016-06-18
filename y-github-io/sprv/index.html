@@ -61,7 +61,7 @@
 					console.log(rankData);
 					$('.rank').text(ev.data);
 				}, false);
-				window.opener.postMessage('requestRank', 'https://splatoon.nintendo.net');	
+				window.opener.postMessage('requestRankData', 'https://splatoon.nintendo.net');	
 				console.log('posted');		
 			});
 		</script>
@@ -72,7 +72,7 @@
 
 			<div class="android-header mdl-layout__header mdl-layout__header--waterfall">
 				<div class="mdl-layout__header-row">
-					<span class="mdl-layout-title"> SPRV (Splatoon Painted Rank Viewer) </span>
+					<span class="mdl-layout-title">スプラトゥーン ぬり ランク ビューワー </span>
 
 					<!-- Navigation -->
 					<div class="mdl-layout-spacer"></div>
@@ -97,7 +97,7 @@
 					<p>
 						したの もじれつを おきにいりに とうろくする
 					</p>
-					<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/^url\("(.*)"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});widnow.addEventListener('message',function(ev){if(ev.data=='requestRankData')ev.source.postMessage(JSON.stringify(d),ev.origin)});w=window.open(b);})();</textarea>
+					<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/^url\("(.*)"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});window.addEventListener('message',function(ev){if(ev.data=='requestRankData')ev.source.postMessage(JSON.stringify(d),ev.origin)});w=window.open(b);})();</textarea>
 					<p>
 						イカリング の そうび の ページで とうろくした おきにいりを ひらく
 					</p>
