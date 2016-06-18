@@ -52,7 +52,7 @@
 				if (!window.opener) {
 					$('.how2use').css('display', 'block');
 					var $jscode = $('.jscode');
-					$jscode.val($jscode.val().replace('#{location}', baseUrl));
+					$jscode.val($jscode.val().replace(/#\{location\}/g, baseUrl));
 					return;
 				}
 				window.addEventListener("message", function receiveMessage(ev) {
@@ -60,7 +60,7 @@
 					console.log(rankData);
 					$('.rank').text(ev.data);
 				}, false);
-				window.opener.postMessage('requestRank');			
+				window.opener.postMessage('requestRank', baseUrl);			
 			});
 		</script>
 		<title>SPRV (Splatoon Painted Rank View)</title>
@@ -95,7 +95,7 @@
 					<p>
 						したの もじれつを おきにいりに とうろくする
 					</p>
-					<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/^url\("(.*)"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});w=window.open(b);w.addEventListener('message',function(ev){if(ev.data=='requestRankData')w.postMessage(JSON.stringify(d))})})();</textarea>
+					<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/^url\("(.*)"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});w=window.open(b);w.addEventListener('message',function(ev){if(ev.data=='requestRankData')w.postMessage(JSON.stringify(d),'#{location}')})})();</textarea>
 					<p>
 						イカリング の そうび の ページで とうろくした おきにいりを ひらく
 					</p>
