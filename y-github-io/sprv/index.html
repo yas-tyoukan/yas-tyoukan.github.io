@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ja">
+	<head>
+		<meta charset="UTF-8">
+		<!-- favicon -->
+		<link rel="shortcut icon" href="favicon.ico">
+		<meta name="viewport"
+		content="width=device-width, initial-scale=1">
+		<!-- 全画面表示化するかどうかの設定。ホーム画面から起動したときしか効かない。 -->
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<!-- ライブラリのロード -->
+		<link rel="stylesheet" href="../res/lib/h5/h5.css" />
+		<script src="../res/lib/jquery/jquery.js"></script>
+		<script src="../res/lib/h5/h5.js"></script>
+
+		<link rel="stylesheet" href="../res/lib/mdl/material.min.css">
+		<script src="../res/lib/mdl/material.min.js"></script>
+		<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+		<!-- トラッキングコード -->
+		<script>
+			(function(i, s, o, g, r, a, m) {
+				i['GoogleAnalyticsObject'] = r;
+				i[r] = i[r] ||
+				function() {
+					(i[r].q = i[r].q || []).push(arguments)
+				}, i[r].l = 1 * new Date();
+				a = s.createElement(o), m = s.getElementsByTagName(o)[0];
+				a.async = 1;
+				a.src = g;
+				m.parentNode.insertBefore(a, m)
+			})(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+
+			ga('create', 'UA-65172741-1', 'auto');
+			ga('send', 'pageview');
+		</script>
+		<!-- ユーザCSS・JS -->
+		<style>
+			@font-face {
+				font-family: ikamodoki;
+				src: url(../res/lib/ikamodoki/ikamodoki1_0.ttf);
+			}
+			body, h1, h2, h3, h4, h5, h6 {
+				font-family: ikamodoki;
+			}
+			.how2use {
+				padding: 10px;
+			}
+		</style>
+		<script>
+			$(function() {
+				var baseUrl = location.href.split('?')[0];
+				if (!window.opener) {
+					$('.how2use').css('display', 'block');
+					var $jscode = $('.jscode');
+					$jscode.val($jscode.val().replace('#{location}', baseUrl));
+					return;
+				}
+				window.addEventListener("message", function receiveMessage(ev) {
+					var rankData = JSON.parse(ev.data);
+					console.log(rankData);
+					$('.rank').text(ev.data);
+				}, false);
+				window.opener.postMessage('requestRank');			
+			});
+		</script>
+		<title>SPRV (Splatoon Painted Rank View)</title>
+	</head>
+	<body>
+		<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+
+			<div class="android-header mdl-layout__header mdl-layout__header--waterfall">
+				<div class="mdl-layout__header-row">
+					<span class="mdl-layout-title"> SPRV (Splatoon Painted Rank Viewer) </span>
+
+					<!-- Navigation -->
+					<div class="mdl-layout-spacer"></div>
+					<nav class="android-navigation mdl-navigation">
+						<a class="mdl-navigation__link mdl-typography--text-uppercase" href="https://splatoon.nintendo.net/profile">Back to IKARING</a>
+						<a class="mdl-navigation__link mdl-typography--text-uppercase" href="/">Auther's page</a>
+					</nav>
+				</div>
+			</div>
+
+			<div class="android-drawer mdl-layout__drawer">
+				<span class="mdl-layout-title"> SPRV </span>
+				<nav class="mdl-navigation">
+					<a class="mdl-navigation__link mdl-typography--text-uppercase" href="https://splatoon.nintendo.net/profile">Back to IKARING</a>
+					<a class="mdl-navigation__link mdl-typography--text-uppercase" href="/">Auther's page</a>
+				</nav>
+			</div>
+
+			<div class="mdl-layout__content">
+				<div class="how2use" style="display:none">
+					<h1>つかいかた</h1>
+					<p>
+						したの もじれつを おきにいりに とうろくする
+					</p>
+					<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/^url\("(.*)"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});w=window.open(b);w.addEventListener('message',function(ev){if(ev.data=='requestRankData')w.postMessage(JSON.stringify(d))})})();</textarea>
+					<p>
+						イカリング の そうび の ページで とうろくした おきにいりを ひらく
+					</p>
+				</div>
+				<div class="rank">
+
+				</div>
+			</div>
+
+			<footer class="android-footer mdl-mega-footer">
+				// TODO フッタ
+			</footer>
+		</div>
+	</body>
+</html>
