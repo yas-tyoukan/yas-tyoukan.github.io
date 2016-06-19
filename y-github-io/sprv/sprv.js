@@ -287,12 +287,23 @@ $(function() {
 		});
 		return;
 	}
-	var indicator = h5.ui.indicator({
-		target: 'main',
-		message: 'ロードちゅう'
+	var indicator;
+	var loaded = false;
+	$(function() {
+		if(loaded){
+			return;
+		}
+		indicator = h5.ui.indicator({
+			target: 'main',
+			message: 'ロードちゅう'
+		});
+		indicator.show();
 	});
-	indicator.show();
 	window.addEventListener('message', function receiveMessage(ev) {
+		loaded = true;
+		if(indicator){
+			indicator.hide();
+		}
 		var rankData = JSON.parse(ev.data);
 		var $rankTableBody = $('.rank_table_body');
 		for (var i = 0, l = rankData.length; i < l; i++) {
