@@ -14,9 +14,9 @@ body, h1, h2, h3, h4, h5, h6, .mdl-layout__title, .mdl-layout-title {
 
 }
 .row_weapon  .img {
-	width: 40px;
-	height: 32px;
-	background-size: 40px, 32px;
+	width: 52px;
+	height: 40px;
+	background-size: 52px, 40px;
 	background-repeat: no-repeat;
 }
 .row_weapon  .name {

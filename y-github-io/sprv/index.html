@@ -39,9 +39,9 @@
 		<script src="sprv.js"></script>
 		<script type="text/ejs" id="row">
 			<tr class="row_weapon">
-				<td class="mdl-data-table__cell--non-numeric img" style="background-image:url([%= src %])"></td>
-				<td class="mdl-data-table__cell--non-numeric name">[%= name %]</td>
-				<td class="mdl-data-table__cell--non-numeric point">[%= point %]</td>
+			<td class="mdl-data-table__cell--non-numeric img" style="background-image:url([%= src %])"></td>
+			<td class="mdl-data-table__cell--non-numeric name">[%= name %]</td>
+			<td class="mdl-data-table__cell--non-numeric point">[%= point %]</td>
 			</tr>
 		</script>
 		<title>SPRV (Splatoon Painted Rank View)</title>
@@ -57,6 +57,21 @@
 					<nav class="android-navigation mdl-navigation">
 						<a class="mdl-navigation__link mdl-typography--text-uppercase" href="https://splatoon.nintendo.net/profile">Back to IKARING</a>
 						<a class="mdl-navigation__link mdl-typography--text-uppercase" href="/">Auther's page</a>
+						<a href="https://twitter.com/share" class="twitter-share-button" data-via="tyoukan__" data-size="large">Tweet</a>
+						<script>
+							! function(d, s, id) {
+								var js, fjs = d.getElementsByTagName(s)[0], p = /^http:/.test(d.location) ? 'http' : 'https';
+								if (!d.getElementById(id)) {
+									js = d.createElement(s);
+									js.id = id;
+									js.src = p + '://platform.twitter.com/widgets.js';
+									fjs.parentNode.insertBefore(js, fjs);
+								}
+							}(document, 'script', 'twitter-wjs');
+						</script>
+						<div class="fb-share-button" data-href="http://yas-tyoukan.github.io/y-github-io/sprv/" data-layout="button" data-mobile-iframe="true">
+							<a class="fb-xfbml-parse-ignore" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Fyas-tyoukan.github.io%2Fy-github-io%2Fsprv%2F&amp;src=sdkpreparse">シェア</a>
+						</div>
 					</nav>
 				</div>
 			</div>
@@ -92,5 +107,19 @@
 				// TODO フッタ
 			</footer>
 		</div>
+
+		<!-- facebook シェアボタン埋め込みSDK-->
+		<div id="fb-root"></div>
+		<script>
+			( function(d, s, id) {
+					var js, fjs = d.getElementsByTagName(s)[0];
+					if (d.getElementById(id))
+						return;
+					js = d.createElement(s);
+					js.id = id;
+					js.src = "//connect.facebook.net/ja_JP/sdk.js#xfbml=1&version=v2.6";
+					fjs.parentNode.insertBefore(js, fjs);
+				}(document, 'script', 'facebook-jssdk'));
+		</script>
 	</body>
 </html>
