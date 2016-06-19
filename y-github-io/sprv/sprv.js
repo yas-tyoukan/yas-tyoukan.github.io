@@ -293,7 +293,6 @@ $(function() {
 	window.addEventListener('message', function receiveMessage(ev) {
 		var rankData = JSON.parse(ev.data);
 		var $rankTableBody = $('.rank_table_body');
-		$('.rank').append($weaponList);
 		for (var i = 0, l = rankData.length; i < l; i++) {
 			var $img = $('<img>');
 			var id = rankData[i].i;
