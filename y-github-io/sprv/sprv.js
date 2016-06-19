@@ -359,8 +359,8 @@
 		'.showIssueDialog click': function() {
 			this.$find('.issue-dialog')[0].showModal();
 		},
-		'.hideIssueDialog click': function() {
-			this.$find('.issue-dialog')[0].hideModal();
+		'.closeIssueDialog click': function() {
+			this.$find('.issue-dialog')[0].close();
 		}
 	};
 	$(function() {
