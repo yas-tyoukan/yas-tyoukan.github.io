@@ -14,7 +14,9 @@ body, main, h1, .mdl-layout__title, .mdl-layout-title {
 .hidden {
 	display: none!important;
 }
-
+.weapon-list{
+	column-count: 3;
+}
 .row_weapon {
 
 }

@@ -38,11 +38,10 @@
 		<link rel="stylesheet" href="sprv.css">
 		<script src="sprv.js"></script>
 		<script type="text/ejs" id="row">
-			<tr class="row_weapon">
-			<td class="mdl-data-table__cell--non-numeric img" style="background-image:url([%= src %])"></td>
-			<td class="mdl-data-table__cell--non-numeric name">[%= name %]</td>
-			<td class="mdl-data-table__cell--non-numeric point">[%= point %]</td>
-			</tr>
+			<div class="mdl-list__item row_weapon">
+				<div class="mdl-list__item-primary-content img" style="background-image:url([%= src %])">[%= name %]</div>
+				<div class="mdl-list__item-secondary-action name">[%= point %]</div>
+			</div>
 		</script>
 		<title>スプラトゥーン ぬり ランク ビューワー </title>
 	</head>
@@ -55,9 +54,9 @@
 					<!-- Navigation -->
 					<div class="mdl-layout-spacer"></div>
 					<nav class="android-navigation mdl-navigation">
-						<a class="mdl-navigation__link" href="https://splatoon.nintendo.net/profile">イカリングにもどる</a>
+						<a class="mdl-navigation__link" href="https://splatoon.nintendo.net/profile">イカリングをひらく</a>
 						<a class="mdl-navigation__link" href="/">さくしゃのページ</a>
-						<a class="mdl-navigation__link"  href="https://twitter.com/share" class="twitter-share-button" data-via="tyoukan__" data-size="large">Tweet</a>
+						<a class="mdl-navigation__link"  href="https://twitter.com/share" class="twitter-share-button" data-via="tyoukan__" data-size="large">ツイート</a>
 						<script>
 							! function(d, s, id) {
 								var js, fjs = d.getElementsByTagName(s)[0], p = /^http:/.test(d.location) ? 'http' : 'https';
@@ -76,7 +75,7 @@
 			<div class="mdl-layout__drawer">
 				<span class="mdl-layout-title">ぬりランク ビューワー </span>
 				<nav class="mdl-navigation">
-					<a class="mdl-navigation__link mdl-typography--text-uppercase" href="https://splatoon.nintendo.net/profile">イカリングにもどる</a>
+					<a class="mdl-navigation__link mdl-typography--text-uppercase" href="https://splatoon.nintendo.net/profile">イカリングをひらく</a>
 					<a class="mdl-navigation__link mdl-typography--text-uppercase" href="/">さくしゃのページ</a>
 				</nav>
 			</div>
@@ -87,8 +86,9 @@
 					<ol>
 						<li>
 							したの もじれつを コピペして ブラウザの おきにいりに とうろくする
-							<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/\/(\w+-\w+)\.png"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});if(!window.addedListener)window.addEventListener('message',function(ev){if(ev.data=='requestRankData')ev.source.postMessage(JSON.stringify(d),ev.origin);});window.addedListener=1;w=window.open(b);})();</textarea>																					
+							<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/\/(\w+-\w+)\.png"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});if(!window.addedListener)window.addEventListener('message',function(ev){if(ev.data=='requestRankData')ev.source.postMessage(JSON.stringify(d),ev.origin);});window.addedListener=1;w=window.open(b);})();</textarea>																												
 					
+
 						</li>
 						<li>
 							イカリング の そうび の ページで とうろくした おきにいりを ひらく
@@ -96,10 +96,8 @@
 					</ol>
 				</div>
 				<div class="rank">
-					<table class="mdl-data-table mdl-shadow--2dp">
-						<thead></thead>
-						<tbody class="rank_table_body"></tbody>
-					</table>
+					<div class="demo-list-action mdl-list weapon-list">
+					</div>
 				</div>
 			</main>
 

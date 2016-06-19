@@ -3,7 +3,7 @@ $(function() {
 	var baseImageDir = '/images/splatoon_weapons';
 	var baseUrl = location.href.split('?')[0];
 
-	var weaopnIdMap = {
+	var weaponIdMap = {
 		"c5b48a8e03781a6d34f2978ac3a1a12f90b301be8f1f4d622a1796697ba603ce-6d54f2f565f920e198dee4b07cedf0e2e016c80cb1106d0855510e3537535502": {
 			"name": "ヒーローチャージャーレプリカ"
 		},
@@ -305,14 +305,14 @@ $(function() {
 			indicator.hide();
 		}
 		var rankData = JSON.parse(ev.data);
-		var $rankTableBody = $('.rank_table_body');
+		var $weaponList = $('.weapon-list');
 		for (var i = 0, l = rankData.length; i < l; i++) {
 			var $img = $('<img>');
 			var id = rankData[i].i;
 			var point = rankData[i].p;
 			var src = baseImageDir + '/' + id + '.png';
-			var name = weaopnIdMap[id].name;
-			h5.core.view.append($rankTableBody, 'row', {
+			var name = weaponIdMap[id].name;
+			h5.core.view.append($weaponList, 'row', {
 				src: src,
 				name: name,
 				point: point
