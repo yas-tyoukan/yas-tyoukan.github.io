@@ -280,9 +280,11 @@ $(function() {
 	};
 
 	if (!window.opener) {
-		$('.how2use').css('display', 'block');
-		var $jscode = $('.jscode');
-		$jscode.val($jscode.val().replace(/#\{location\}/, baseUrl));
+		$(function() {
+			$('.how2use').css('display', 'block');
+			var $jscode = $('.jscode');
+			$jscode.val($jscode.val().replace(/#\{location\}/, baseUrl));
+		});
 		return;
 	}
 	var indicator = h5.ui.indicator({
@@ -299,7 +301,7 @@ $(function() {
 			var point = rankData[i].p;
 			var src = baseImageDir + '/' + id + '.png';
 			var name = weaopnIdMap[id].name;
-			h5.core.view.append($rankTableBody, 'row',{
+			h5.core.view.append($rankTableBody, 'row', {
 				src: src,
 				name: name,
 				point: point
