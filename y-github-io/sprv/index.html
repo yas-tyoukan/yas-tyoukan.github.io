@@ -46,13 +46,13 @@
 				<div class="mdl-list__item-secondary-action point">[%= point %]</div>
 			</div>
 		</script>
-		<title>スプラトゥーン ぬり ランク ビューワー </title>
+		<title>スプラトゥーン ぬりランク ビューワー </title>
 	</head>
 	<body>
 		<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
 			<div class="android-header mdl-layout__header mdl-layout__header--waterfall">
 				<div class="mdl-layout__header-row">
-					<span class="mdl-layout-title">スプラトゥーン ぬり ランク ビューワー </span>
+					<span class="mdl-layout-title">スプラトゥーン ぬりランク ビューワー </span>
 
 					<!-- Navigation -->
 					<div class="mdl-layout-spacer"></div>
@@ -87,14 +87,31 @@
 
 			<main class="mdl-layout__content">
 				<div class="how2use" style="display:none">
-					<h1>つかいかた</h1>
+					<h1>スプラトゥーン ぬりランク ビューワー</h1>
+					<p>スプラトゥーンの ブキの ぬりランキングを みやすくするための ツールだよ</p>
+					<img class="img-ex" src="ex2.png">
+					<p>グーグル クローム で ひらこう</p>
+					<p>はっきり いって ほかの ブラウザは ダサい</p>
+					<h2>つかいかた</h2>
 					<ol>
 						<li>
-							したの もじれつを コピペして ブラウザの おきにいりに とうろくする
+							したの もじれつを コピペして ブラウザの おきにいりに とうろく しよう
 							<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/\/(\w+-\w+)\.png"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});if(!window.addedListener)window.addEventListener('message',function(ev){if(ev.data=='requestRankData')ev.source.postMessage(JSON.stringify(d),ev.origin);});window.addedListener=1;w=window.open(b);})();</textarea>																												
 						</li>
 						<li>
-							イカリング の そうび の ページで とうろくした おきにいりを ひらく
+							イカリング の そうび の ページを ひらこう
+							<img class="img-ex" src="ex0.png">
+						</li>
+						<li>
+							イカリング の そうび の ページを みている じょうたいで  さっき とうろくした おきにいりを ひらこう
+						</li>
+						<li>
+							こんな がめんが ひらく はずだ。 ブラウザの ポップアップは きょか しておいてね
+							<img class="img-ex" src="ex1.png">
+						</li>
+						<li>
+							ひだりうえの メニューから ひょうじを きりかえることが できるよ
+							<img class="img-ex" src="ex2.png">
 						</li>
 					</ol>
 				</div>

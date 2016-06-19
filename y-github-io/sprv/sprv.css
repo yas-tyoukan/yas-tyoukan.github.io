@@ -4,11 +4,17 @@
 	font-family: ikamodoki;
 	src: url(../res/lib/ikamodoki/ikamodoki1_0.ttf);
 }
-body, main, h1, .mdl-layout__title, .mdl-list__item, .mdl-layout-title {
+body, main, h1, h2, .mdl-layout__title, .mdl-list__item, .mdl-layout-title {
 	font-family: ikamodoki;
 }
 .how2use {
 	padding: 10px;
+}
+
+.how2use .img-ex{
+	max-width: 600px;
+	display: block;
+    margin: 1em 1em 2em 1em;
 }
 
 .hidden {
