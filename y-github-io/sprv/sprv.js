@@ -304,6 +304,9 @@
 				indicator.show();
 			});
 			window.addEventListener('message', function receiveMessage(ev) {
+				if(baseIkaring !== ev.origin){
+					return;
+				}
 				loaded = true;
 				if (indicator) {
 					indicator.hide();
