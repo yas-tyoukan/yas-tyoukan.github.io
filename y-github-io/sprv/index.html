@@ -97,7 +97,7 @@
 					<p>
 						したの もじれつを おきにいりに とうろくする
 					</p>
-					<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/^url\("(.*)"\)$/)[1].match(/\w*\.png$/)[0].slice(0,-4), p:$(this).find('.equip-painted-point-number').text()})});window.addEventListener('message',function(ev){if(ev.data=='requestRankData')ev.source.postMessage(JSON.stringify(d),ev.origin)});w=window.open(b);})();</textarea>
+					<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/\/(\w+-\w+)\.png"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});window.addEventListener('message',function(ev){if(ev.data=='requestRankData')ev.source.postMessage(JSON.stringify(d),ev.origin)});w=window.open(b);})();</textarea>
 					<p>
 						イカリング の そうび の ページで とうろくした おきにいりを ひらく
 					</p>
