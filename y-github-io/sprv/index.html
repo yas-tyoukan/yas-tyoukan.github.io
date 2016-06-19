@@ -44,7 +44,7 @@
 			<td class="mdl-data-table__cell--non-numeric point">[%= point %]</td>
 			</tr>
 		</script>
-		<title>SPRV (Splatoon Painted Rank View)</title>
+		<title>スプラトゥーン ぬり ランク ビューワー </title>
 	</head>
 	<body>
 		<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
@@ -55,9 +55,9 @@
 					<!-- Navigation -->
 					<div class="mdl-layout-spacer"></div>
 					<nav class="android-navigation mdl-navigation">
-						<a class="mdl-navigation__link mdl-typography--text-uppercase" href="https://splatoon.nintendo.net/profile">Back to IKARING</a>
-						<a class="mdl-navigation__link mdl-typography--text-uppercase" href="/">Auther's page</a>
-						<a href="https://twitter.com/share" class="twitter-share-button" data-via="tyoukan__" data-size="large">Tweet</a>
+						<a class="mdl-navigation__link" href="https://splatoon.nintendo.net/profile">イカリングにもどる</a>
+						<a class="mdl-navigation__link" href="/">さくしゃのページ</a>
+						<a class="mdl-navigation__link"  href="https://twitter.com/share" class="twitter-share-button" data-via="tyoukan__" data-size="large">Tweet</a>
 						<script>
 							! function(d, s, id) {
 								var js, fjs = d.getElementsByTagName(s)[0], p = /^http:/.test(d.location) ? 'http' : 'https';
@@ -69,7 +69,7 @@
 								}
 							}(document, 'script', 'twitter-wjs');
 						</script>
-						<div class="fb-share-button" data-href="http://yas-tyoukan.github.io/y-github-io/sprv/" data-layout="button" data-mobile-iframe="true">
+						<div class="navigation__link fb-share-button mdl-navigation__link" data-href="http://yas-tyoukan.github.io/y-github-io/sprv/" data-layout="button" data-mobile-iframe="true">
 							<a class="fb-xfbml-parse-ignore" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Fyas-tyoukan.github.io%2Fy-github-io%2Fsprv%2F&amp;src=sdkpreparse">シェア</a>
 						</div>
 					</nav>
@@ -77,23 +77,27 @@
 			</div>
 
 			<div class="mdl-layout__drawer">
-				<span class="mdl-layout-title"> SPRV </span>
+				<span class="mdl-layout-title">ぬりランク ビューワー </span>
 				<nav class="mdl-navigation">
-					<a class="mdl-navigation__link mdl-typography--text-uppercase" href="https://splatoon.nintendo.net/profile">Back to IKARING</a>
-					<a class="mdl-navigation__link mdl-typography--text-uppercase" href="/">Auther's page</a>
+					<a class="mdl-navigation__link mdl-typography--text-uppercase" href="https://splatoon.nintendo.net/profile">イカリングにもどる</a>
+					<a class="mdl-navigation__link mdl-typography--text-uppercase" href="/">さくしゃのページ</a>
 				</nav>
 			</div>
 
 			<main class="mdl-layout__content">
 				<div class="how2use" style="display:none">
 					<h1>つかいかた</h1>
-					<p>
-						したの もじれつを おきにいりに とうろくする
-					</p>
-					<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/\/(\w+-\w+)\.png"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});if(!window.addedListener)window.addEventListener('message',function(ev){if(ev.data=='requestRankData')ev.source.postMessage(JSON.stringify(d),ev.origin);});window.addedListener=1;w=window.open(b);})();</textarea>
-					<p>
-						イカリング の そうび の ページで とうろくした おきにいりを ひらく
-					</p>
+					<ol>
+						<li>
+							したの もじれつを おきにいりに とうろくする
+							<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/\/(\w+-\w+)\.png"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});if(!window.addedListener)window.addEventListener('message',function(ev){if(ev.data=='requestRankData')ev.source.postMessage(JSON.stringify(d),ev.origin);});window.addedListener=1;w=window.open(b);})();</textarea>							
+					
+
+						</li>
+						<li>
+							イカリング の そうび の ページで とうろくした おきにいりを ひらく
+						</li>
+					</ol>
 				</div>
 				<div class="rank">
 					<table class="mdl-data-table mdl-shadow--2dp">
