@@ -1,0 +1,23 @@
+@charset "utf-8";
+
+@font-face {
+	font-family: ikamodoki;
+	src: url(../res/lib/ikamodoki/ikamodoki1_0.ttf);
+}
+body, h1, h2, h3, h4, h5, h6, .mdl-layout__title, .mdl-layout-title {
+	font-family: ikamodoki !important;
+}
+.how2use {
+	padding: 10px;
+}
+.row_weapon {
+
+}
+.row_weapon  .img {
+	width: 40px;
+	height: 32px;
+	background-size: 40px, 32px;
+}
+.row_weapon  .name {
+	font-family: "Helvetica Neue", Helvetica, Arial, Roboto, "Droid Sans", "メイリオ", Meiryo, "ＭＳ Ｐゴシック", "ヒラギノ角ゴ Pro W3", "Hiragino Kaku Gothic ProN", sans-serif;
+}
