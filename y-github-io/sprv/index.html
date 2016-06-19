@@ -46,25 +46,7 @@
 				padding: 10px;
 			}
 		</style>
-		<script>
-			$(function() {
-				var baseUrl = location.href.split('?')[0];
-				if (!window.opener) {
-					$('.how2use').css('display', 'block');
-					var $jscode = $('.jscode');
-					$jscode.val($jscode.val().replace(/#\{location\}/, baseUrl));
-					return;
-				}
-				window.addEventListener('message', function receiveMessage(ev) {
-					console.log('recieved');
-					var rankData = JSON.parse(ev.data);
-					console.log(rankData);
-					$('.rank').text(ev.data);
-				}, false);
-				window.opener.postMessage('requestRankData', 'https://splatoon.nintendo.net');
-				console.log('posted');
-			});
-		</script>
+		<script src="sprv.js"></script>
 		<title>SPRV (Splatoon Painted Rank View)</title>
 	</head>
 	<body>
