@@ -4,23 +4,23 @@
 	font-family: ikamodoki;
 	src: url(../res/lib/ikamodoki/ikamodoki1_0.ttf);
 }
-body, main, h1, h2, .mdl-layout__title, .mdl-list__item, .mdl-layout-title {
+body, main, h1, h2, h3, h4, h5, h6, .mdl-layout__title, .mdl-list__item, .mdl-layout-title {
 	font-family: ikamodoki;
 }
 .how2use {
 	padding: 10px;
 }
 
-.how2use .img-ex{
+.how2use .img-ex {
 	max-width: 600px;
 	display: block;
-    margin: 1em 1em 2em 1em;
+	margin: 1em 1em 2em 1em;
 }
 
 .hidden {
-	display: none!important;
+	display: none !important;
 }
-.weapon-list{
+.weapon-list {
 	column-count: 4;
 }
 .row_weapon {
@@ -32,6 +32,10 @@ body, main, h1, h2, .mdl-layout__title, .mdl-list__item, .mdl-layout-title {
 	background-size: 52px, 40px;
 	background-repeat: no-repeat;
 }
-.row_weapon  .name {
+.issue-dialog{
+	width: 50%;
+	max-width: 800px;
+}
+.row_weapon .name, .issue-dialog p {
 	font-family: "Helvetica Neue", Helvetica, Arial, Roboto, "Droid Sans", "メイリオ", Meiryo, "ＭＳ Ｐゴシック", "ヒラギノ角ゴ Pro W3", "Hiragino Kaku Gothic ProN", sans-serif;
 }

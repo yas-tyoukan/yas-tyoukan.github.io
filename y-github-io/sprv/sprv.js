@@ -1,15 +1,5 @@
 (function() {
 	var baseUrl = location.href.split('?')[0];
-	
-	if (!window.opener) {
-		$(function() {
-			$('.how2use').css('display', 'block');
-			var $jscode = $('.jscode');
-			$jscode.val($jscode.val().replace(/#\{location\}/, baseUrl));
-		});
-		return;
-	}
-
 	var baseIkaring = 'https://splatoon.nintendo.net';
 	var baseImageDir = '/images/splatoon_weapons';
 
@@ -292,6 +282,15 @@
 	var controller = {
 		__name: 'SPRVController',
 		__init: function() {
+			if (!window.opener) {
+				$(function() {
+					$('.how2use').css('display', 'block');
+					var $jscode = $('.jscode');
+					$jscode.val($jscode.val().replace(/#\{location\}/, baseUrl));
+				});
+				this._how2ViewMode = true;
+				return;
+			}
 			var indicator;
 			var loaded = false;
 			$(function() {
@@ -328,22 +327,40 @@
 			window.opener.postMessage('requestRankData', baseIkaring);
 		},
 		'.toggleWeaponName click': function() {
+			if (this._how2ViewMode) {
+				return;
+			}
 			this.$find('.row_weapon .name').toggleClass('hidden');
 		},
 		'.toggleWeaponImg click': function() {
+			if (this._how2ViewMode) {
+				return;
+			}
 			this.$find('.row_weapon .img').toggleClass('hidden');
 		},
 		'.incrementColumn click': function() {
+			if (this._how2ViewMode) {
+				return;
+			}
 			var $ul = this.$find('.weapon-list');
 			var count = $ul.css('column-count');
 			$ul.css('column-count', parseInt(count) + 1);
 		},
 		'.decrementColumn click': function() {
+			if (this._how2ViewMode) {
+				return;
+			}
 			var $ul = this.$find('.weapon-list');
 			var count = $ul.css('column-count');
 			if (count > 1) {
 				$ul.css('column-count', parseInt(count) - 1);
 			}
+		},
+		'.showIssueDialog click': function() {
+			this.$find('.issue-dialog')[0].showModal();
+		},
+		'.hideIssueDialog click': function() {
+			this.$find('.issue-dialog')[0].hideModal();
 		}
 	};
 	$(function() {

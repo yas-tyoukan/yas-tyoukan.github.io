@@ -39,11 +39,11 @@
 		<script src="sprv.js"></script>
 		<script type="text/ejs" id="row">
 			<div class="mdl-list__item row_weapon">
-				<div class="mdl-list__item-primary-content">
-					<div class="img" style="background-image:url([%= src %])"></div>				
-					<div class="mdl-list__item-secondary-action name">[%= name %]</div>
-				</div>
-				<div class="mdl-list__item-secondary-action point">[%= point %]</div>
+			<div class="mdl-list__item-primary-content">
+			<div class="img" style="background-image:url([%= src %])"></div>
+			<div class="mdl-list__item-secondary-action name">[%= name %]</div>
+			</div>
+			<div class="mdl-list__item-secondary-action point">[%= point %]</div>
 			</div>
 		</script>
 		<title>スプラトゥーン ぬりランク ビューワー </title>
@@ -57,46 +57,42 @@
 					<!-- Navigation -->
 					<div class="mdl-layout-spacer"></div>
 					<nav class="android-navigation mdl-navigation">
-						<a class="mdl-navigation__link"  href="https://twitter.com/share" class="twitter-share-button" data-via="tyoukan__" data-size="large">ツイート</a>
-						<script>
-							! function(d, s, id) {
-								var js, fjs = d.getElementsByTagName(s)[0], p = /^http:/.test(d.location) ? 'http' : 'https';
-								if (!d.getElementById(id)) {
-									js = d.createElement(s);
-									js.id = id;
-									js.src = p + '://platform.twitter.com/widgets.js';
-									fjs.parentNode.insertBefore(js, fjs);
-								}
-							}(document, 'script', 'twitter-wjs');
-						</script>
+						<a href="https://twitter.com/share" class="twitter-share-button" data-text="スプラトゥーン ぬりランク ビューワー" data-via="tyoukan__" data-size="large">Tweet</a> <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
 					</nav>
 				</div>
 			</div>
 
 			<div class="mdl-layout__drawer">
-				<span class="mdl-layout-title">ぬりランク ビューワー </span>
+				<span class="mdl-layout-title">ぬりランク ビューワー</span>
 				<nav class="mdl-navigation">
-					<a class="mdl-navigation__link mdl-typography--text-uppercase toggleWeaponName" href="#">ブキのなまえ  ひょうじ きりかえ</a>
-					<a class="mdl-navigation__link mdl-typography--text-uppercase incrementColumn" href="#">れつを ふやす</a>
-					<a class="mdl-navigation__link mdl-typography--text-uppercase decrementColumn" href="#">れつを へらす</a>
+					<a class="mdl-navigation__link toggleWeaponName" href="#">ブキのなまえ  ひょうじ きりかえ</a>
+					<a class="mdl-navigation__link incrementColumn" href="#">れつを ふやす</a>
+					<a class="mdl-navigation__link decrementColumn" href="#">れつを へらす</a>
 					<div class="mdl-menu__item--full-bleed-divider"></div>
-					<a class="mdl-navigation__link mdl-typography--text-uppercase" href="https://splatoon.nintendo.net/profile">イカリングをひらく</a>
-					<a class="mdl-navigation__link mdl-typography--text-uppercase" href="/">さくしゃのページ</a>
+					<a class="mdl-navigation__link" href="https://splatoon.nintendo.net/profile">イカリングをひらく</a>
+					<a class="mdl-navigation__link" href="/">さくしゃのページ</a>
+					<a class="mdl-navigation__link showIssueDialog" href="#">バグ ほうこく</a>
 				</nav>
 			</div>
 
 			<main class="mdl-layout__content">
 				<div class="how2use" style="display:none">
 					<h1>スプラトゥーン ぬりランク ビューワー</h1>
-					<p>スプラトゥーンの ブキの ぬりランキングを みやすくするための ツールだよ</p>
+					<p>
+						スプラトゥーンの ブキの ぬりランキングを みやすくするための ツールだよ
+					</p>
 					<img class="img-ex" src="ex2.png">
-					<p>グーグル クローム で ひらこう</p>
-					<p>はっきり いって ほかの ブラウザは ダサい</p>
+					<p>
+						グーグル クローム で ひらこう
+					</p>
+					<p>
+						はっきり いって ほかの ブラウザは ダサい
+					</p>
 					<h2>つかいかた</h2>
 					<ol>
 						<li>
 							したの もじれつを コピペして ブラウザの おきにいりに とうろく しよう
-							<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/\/(\w+-\w+)\.png"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});if(!window.addedListener)window.addEventListener('message',function(ev){if(ev.data=='requestRankData')ev.source.postMessage(JSON.stringify(d),ev.origin);});window.addedListener=1;w=window.open(b);})();</textarea>																												
+							<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/\/(\w+-\w+)\.png"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});if(!window.addedListener)window.addEventListener('message',function(ev){if(ev.data=='requestRankData')ev.source.postMessage(JSON.stringify(d),ev.origin);});window.addedListener=1;w=window.open(b);})();</textarea>
 						</li>
 						<li>
 							イカリング の そうび の ページを ひらこう
@@ -116,9 +112,37 @@
 					</ol>
 				</div>
 				<div class="rank">
-					<div class="demo-list-action mdl-list weapon-list">
-					</div>
+					<div class="demo-list-action mdl-list weapon-list"></div>
 				</div>
+				<dialog class="issue-dialog mdl-dialog">
+					<div class="mdl-dialog__content">
+						<h3>バグ ほうこく</h3>
+						<h4>きぞんの ほうこくを かくにん</h4>
+						<p><a href="https://github.com/yas-tyoukan/yas-tyoukan.github.io/issues" target="_blank">こちら</a>にすでに同じ内容のものがないか確認してから報告してください。</p>
+						<h4>テンプレ</h4>
+						<p>必ずしもテンプレ通りである必要はありませんが、
+						バグ報告はイカのテンプレで書いてくれると解決がスムーズです。</p>
+						<textarea class="mdl-textfield__input" type="text" rows= "5">(問題の内容をここに記述)
+
+【再現手順】
+問題が起きた時に行った手順をここに記述
+
+【ブラウザとバージョン】 Chrome 51
+【OSとバージョン】 Mac OS X
+【ログ】
+chromeならF12キー(Macの場合はコマンド+Option+i)を押した時に表示されるログをここに記述
+(ログがあると、より解決がスムーズです。)</textarea>
+						<h4>ほうこくさき</h4>
+						<p>githubのアカウントを持っているかたは<a href="https://github.com/yas-tyoukan/yas-tyoukan.github.io/issues" target="_blank">こちら</a>の[New Issue]ボタンから</p>
+						<p>もっていない方はツイッターでお知らせください。140字超える場合はDMでお願いします。</p>
+						<a href="https://twitter.com/intent/tweet?screen_name=tyoukan__&text=%5B%E3%81%AC%E3%82%8A%E3%83%A9%E3%83%B3%E3%82%AF%E3%83%93%E3%83%A5%E3%83%BC%E3%83%AF%E3%83%BC%3Aissue%5D%20(%E3%81%93%E3%81%93%E3%81%AB%E5%86%85%E5%AE%B9%E3%82%92%E8%A8%98%E8%BF%B0)" class="twitter-mention-button" data-related="tyoukan__">Tweet to @tyoukan__</a> <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+					</div>
+					<div class="mdl-dialog__actions mdl-dialog__actions--full-width">
+						<button type="button" class="mdl-button closeIssueDialog">
+							とじる
+						</button>
+					</div>
+				</dialog>
 			</main>
 		</div>
 	</body>
