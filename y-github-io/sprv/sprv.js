@@ -1,4 +1,6 @@
 (function() {
+	var baseUrl = location.href.split('?')[0];
+	
 	if (!window.opener) {
 		$(function() {
 			$('.how2use').css('display', 'block');
@@ -10,7 +12,6 @@
 
 	var baseIkaring = 'https://splatoon.nintendo.net';
 	var baseImageDir = '/images/splatoon_weapons';
-	var baseUrl = location.href.split('?')[0];
 
 	var weaponIdMap = {
 		"c5b48a8e03781a6d34f2978ac3a1a12f90b301be8f1f4d622a1796697ba603ce-6d54f2f565f920e198dee4b07cedf0e2e016c80cb1106d0855510e3537535502": {
