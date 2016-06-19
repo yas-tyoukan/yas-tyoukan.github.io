@@ -15,12 +15,12 @@ body, main, h1, .mdl-layout__title, .mdl-list__item, .mdl-layout-title {
 	display: none!important;
 }
 .weapon-list{
-	column-count: 3;
+	column-count: 4;
 }
 .row_weapon {
-
+	break-inside: avoid;
 }
-.row_weapon  .img {
+.row_weapon .img {
 	width: 52px;
 	height: 40px;
 	background-size: 52px, 40px;
