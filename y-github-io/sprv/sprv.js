@@ -1,4 +1,13 @@
-$(function() {
+(function() {
+	if (!window.opener) {
+		$(function() {
+			$('.how2use').css('display', 'block');
+			var $jscode = $('.jscode');
+			$jscode.val($jscode.val().replace(/#\{location\}/, baseUrl));
+		});
+		return;
+	}
+
 	var baseIkaring = 'https://splatoon.nintendo.net';
 	var baseImageDir = '/images/splatoon_weapons';
 	var baseUrl = location.href.split('?')[0];
@@ -279,46 +288,64 @@ $(function() {
 		}
 	};
 
-	if (!window.opener) {
-		$(function() {
-			$('.how2use').css('display', 'block');
-			var $jscode = $('.jscode');
-			$jscode.val($jscode.val().replace(/#\{location\}/, baseUrl));
-		});
-		return;
-	}
-	var indicator;
-	var loaded = false;
-	$(function() {
-		if(loaded){
-			return;
-		}
-		indicator = h5.ui.indicator({
-			target: 'main',
-			message: 'ロードちゅう'
-		});
-		indicator.show();
-	});
-	window.addEventListener('message', function receiveMessage(ev) {
-		loaded = true;
-		if(indicator){
-			indicator.hide();
-		}
-		var rankData = JSON.parse(ev.data);
-		var $weaponList = $('.weapon-list');
-		for (var i = 0, l = rankData.length; i < l; i++) {
-			var $img = $('<img>');
-			var id = rankData[i].i;
-			var point = rankData[i].p;
-			var src = baseImageDir + '/' + id + '.png';
-			var name = weaponIdMap[id].name;
-			h5.core.view.append($weaponList, 'row', {
-				src: src,
-				name: name,
-				point: point
+	var controller = {
+		__name: 'SPRVController',
+		__init: function() {
+			var indicator;
+			var loaded = false;
+			$(function() {
+				if (loaded) {
+					return;
+				}
+				indicator = h5.ui.indicator({
+					target: 'main',
+					message: 'ロードちゅう'
+				});
+				indicator.show();
 			});
+			window.addEventListener('message', function receiveMessage(ev) {
+				loaded = true;
+				if (indicator) {
+					indicator.hide();
+				}
+				var rankData = JSON.parse(ev.data);
+				var $weaponList = $('.weapon-list');
+				for (var i = 0, l = rankData.length; i < l; i++) {
+					var $img = $('<img>');
+					var id = rankData[i].i;
+					var point = rankData[i].p;
+					var src = baseImageDir + '/' + id + '.png';
+					var name = weaponIdMap[id].name;
+					h5.core.view.append($weaponList, 'row', {
+						src: src,
+						name: name,
+						point: point
+					});
+				}
+				indicator.hide();
+			}, false);
+			window.opener.postMessage('requestRankData', baseIkaring);
+		},
+		'.toggleWeaponName click': function() {
+			this.$find('.row_weapon .name').toggleClass('hidden');
+		},
+		'.toggleWeaponImg click': function() {
+			this.$find('.row_weapon .img').toggleClass('hidden');
+		},
+		'.incrementColumn click': function() {
+			var $ul = this.$find('.weapon-list');
+			var count = $ul.css('column-count');
+			$ul.css('column-count', parseInt(count) + 1);
+		},
+		'.decrementColumn click': function() {
+			var $ul = this.$find('.weapon-list');
+			var count = $ul.css('column-count');
+			if (count > 1) {
+				$ul.css('column-count', parseInt(count) - 1);
+			}
 		}
-		indicator.hide();
-	}, false);
-	window.opener.postMessage('requestRankData', baseIkaring);
-});
+	};
+	$(function() {
+		h5.core.controller(document.body, controller);
+	});
+})();
