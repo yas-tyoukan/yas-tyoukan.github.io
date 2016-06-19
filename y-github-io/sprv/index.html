@@ -39,8 +39,11 @@
 		<script src="sprv.js"></script>
 		<script type="text/ejs" id="row">
 			<div class="mdl-list__item row_weapon">
-				<div class="mdl-list__item-primary-content img" style="background-image:url([%= src %])">[%= name %]</div>
-				<div class="mdl-list__item-secondary-action name">[%= point %]</div>
+				<div class="mdl-list__item-primary-content">
+					<div class="img" style="background-image:url([%= src %])"></div>				
+					<div class="mdl-list__item-secondary-action name">[%= name %]</div>
+				</div>
+				<div class="mdl-list__item-secondary-action point">[%= point %]</div>
 			</div>
 		</script>
 		<title>スプラトゥーン ぬり ランク ビューワー </title>
