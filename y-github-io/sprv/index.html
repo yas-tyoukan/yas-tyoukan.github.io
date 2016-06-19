@@ -45,8 +45,26 @@
 			.how2use {
 				padding: 10px;
 			}
+			.row_weapon {
+
+			}
+			.row_weapon  .img {
+				width: 40px;
+				height: 32px;
+				background-size: 40px, 32px;
+			}
+			.row_weapon  .name {
+				font-family: "Helvetica Neue", Helvetica, Arial, Roboto, "Droid Sans", "メイリオ", Meiryo, "ＭＳ Ｐゴシック", "ヒラギノ角ゴ Pro W3", "Hiragino Kaku Gothic ProN", sans-serif;
+			}
 		</style>
 		<script src="sprv.js"></script>
+		<scrypt type="text/ejs" id="row">
+			<tr class="row_weapon">
+				<td class="img" scr="[%= src %]"></td>
+				<td class="name">[%= name %]</td>
+				<td class="point">[%= point %]</td>
+			</tr>
+		</scrypt>
 		<title>SPRV (Splatoon Painted Rank View)</title>
 	</head>
 	<body>
@@ -79,12 +97,15 @@
 					<p>
 						したの もじれつを おきにいりに とうろくする
 					</p>
-					<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/^url\("(.*)"\)$/)[1], p:$(this).find('.equip-painted-point-number').text()})});window.addEventListener('message',function(ev){if(ev.data=='requestRankData')ev.source.postMessage(JSON.stringify(d),ev.origin)});w=window.open(b);})();</textarea>
+					<textarea class="jscode mdl-textfield__input" type="text" rows= "5">javascript:(function(){b='#{location}';d=[];f=function(){}; $('.equip-painted-rank .equip-painted-data').each(function(){d.push({i:$(this).find('.equip-painted-weapon-img').css('background-image').match(/^url\("(.*)"\)$/)[1].match(/\w*\.png$/)[0].slice(0,-4), p:$(this).find('.equip-painted-point-number').text()})});window.addEventListener('message',function(ev){if(ev.data=='requestRankData')ev.source.postMessage(JSON.stringify(d),ev.origin)});w=window.open(b);})();</textarea>
 					<p>
 						イカリング の そうび の ページで とうろくした おきにいりを ひらく
 					</p>
 				</div>
 				<div class="rank">
+					<table class="mdl-data-table mdl-js-data-table mdl-data-table--selectable mdl-shadow--2dp">
+						<tbody class="rank_table_body"></tbody>
+					</table>
 
 				</div>
 			</div>
