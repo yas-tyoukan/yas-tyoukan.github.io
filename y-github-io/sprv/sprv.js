@@ -17,7 +17,7 @@
 			"name": "スプラチャージャーワカメ"
 		},
 		"c624ffec5c28352485cb210ee152756cb6ca486b44e3b10dc4b9bf04ab953927-d4ccab6d2d8e88927f2e82ee0eedf79bf23130eaa0d19541e0d8aecc12f9e237": {
-			"name": "ジェットスイーパー"
+			"name": "デュアルスイーパー"
 		},
 		"ff801fb34b6acf0ccb763f2f98c98553ce5d298a144855b36ffed89730e358d2-0c0430e77b86233583dc986b978f860849e05e47fdfb03eb5016ba3f39d6adb0": {
 			"name": "スプラローラーコラボ"
@@ -32,7 +32,7 @@
 			"name": "わかばシューター"
 		},
 		"87293e3e06bd09356e0f7515d77ac7bd00be416492c6e8c21879a627cd3babb9-16acbb83cca056ad0c556c427094702ca17f7cfbe069515b47dbba0670f9cfe7": {
-			"name": "ジェットスイーパーカスタム"
+			"name": "デュアルスイーパーカスタム"
 		},
 		"3359908b8a0baf5b2c28402ad74d1d754c5adc3f9971832fac75fd4344f5c428-a5e6a86a5f889975ee7bf7e298e099e54c26e4fc424012ba83f6a02635f67b71": {
 			"name": ".52ガロン"
