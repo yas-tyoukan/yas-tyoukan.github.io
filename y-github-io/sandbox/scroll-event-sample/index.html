@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<!-- コンテンツ幅に合わせる場合、コンテンツの数値(width)を指定する。-->
+<!-- スケールをコンテンツに合わせる場合、minimum-scale=1, maximum-scale=1 を指定する。-->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 全画面表示化するかどうかの設定。ホーム画面から起動したときしか効かない。 -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<!-- ライブラリのロード -->
+<!-- jquery -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+<!-- ユーザCSS・JS -->
+<link type="text/css" href="index.css" rel="stylesheet" />
+<script src="index.js"></script>
+<title>スクロールイベントサンプル</title>
+</head>
+<body>
+	<div class="container">
+		<div class="header">
+			<p>スクロールイベント で ようそ が うごく サンプル</p>
+			<p>した へ スクロール してね</p>
+		</div>
+		<div class="scroll-target-wrapper">
+			<div class="scroll-target slide left pull-left">
+				イカした やつら が
+			</div>
+		</div>
+		<div class="scroll-target-wrapper">
+			<div class="scroll-target slide right pull-right">
+				イカした しんか ！！
+			</div>
+		</div>
+		<div class="scroll-target-wrapper">
+			<div class="scroll-target slide right pull-right">
+				<img class="inkling" src="img/shooter.png" />
+			</div>
+		</div>
+		<div class="dummy-box"></div>
+		<div class="scroll-target-wrapper">
+			<div class="scroll-target slide left pull-left">
+				ガチ で ぬりあう
+			</div>
+			<div class="scroll-target slide right pull-right">
+				 とき が きた！！
+			</div>
+		</div>
+		<div class="scroll-target-wrapper">
+			<div class="scroll-target slide left pull-left">
+				<img class="inkling" src="img/spattery.jpg" />
+			</div>
+		</div>
+		<div class="dummy-box"></div>
+		<div class="scroll-target-wrapper sllow">
+			<div class="scroll-target fadein">
+				スプラトゥーン2 はつばいちゅう！！
+			</div>
+		</div>
+	</div>
+</body>
+</html>

@@ -1,0 +1,81 @@
+@font-face {
+	font-family: ikamodoki;
+	src: url("../../res/lib/ikamodoki/ikamodoki1_0.ttf") format('truetype');
+}
+
+body {
+	font-family: ikamodoki;
+	background: #e5e3e3;
+	text-align: center;
+	font-size: 24px;
+}
+
+.inkling {
+	display: inline-block;
+	width: 300px;
+}
+
+.pull-left {
+	float: left;
+}
+
+.pull-right {
+	float: right;
+}
+
+.header{
+	height: 1400px;
+}
+
+.container {
+	width: 780px;
+	overflow-x: hidden;
+	margin: auto;
+	background: #ffffff;
+	box-sizing: border-box;
+	border-left: 1px solid;
+	border-right: 1px solid;
+}
+
+.dummy-box {
+	height: 500px;
+}
+
+.scroll-target-wrapper {
+	height: 300px;
+}
+
+.scroll-target-wrapper > * {
+	transition-duration: .5s;
+	transition-property: all;
+}
+
+.scroll-target-wrapper.sllow > * {
+	transition-duration: 1.5s;
+}
+
+.scroll-target.fadein {
+	opacity: 0;
+}
+
+.scroll-target.slide.left {
+	position: relative;
+	left: -780px;
+}
+
+.scroll-target.slide.right {
+	position: relative;
+	right: -780px;
+}
+
+.scroll-target.fadein.in-view {
+	opacity: 1;
+}
+
+.scroll-target.slide.in-view.right {
+	right: 100px;
+}
+
+.scroll-target.slide.in-view.left {
+	left: 100px;
+}
