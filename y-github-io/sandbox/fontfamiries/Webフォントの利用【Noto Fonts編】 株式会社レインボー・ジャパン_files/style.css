@@ -1,0 +1,31 @@
+@charset "UTF-8";
+
+#container-bg {
+    position: absolute;
+    width: 100%;
+
+    min-width: 1024px;
+    overflow: hidden;
+}
+#container-bg #bg-basearea {
+  position: absolute;
+}
+#container-bg #bg-basearea #bg-animarea {
+  position: absolute;
+  
+}
+.trianglemc{
+	z-index:1;
+}
+.debugarea{
+	position: absolute;
+
+	top:0px;
+	left:0px;
+	width: 200px;
+	height: 50px;
+	
+	padding: 10px;
+
+	z-index: 5250;
+}
