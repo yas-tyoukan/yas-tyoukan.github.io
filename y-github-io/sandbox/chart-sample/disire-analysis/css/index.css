@@ -1,0 +1,186 @@
+@charset "utf-8";
+
+/** 全体の設定 **/
+body {
+	padding: 1em;
+}
+
+button {
+	width: 62px;
+	height: 40px;
+	background-color: #eee;
+	text-align: center;
+	display: inline-block;
+	font-size: 14px;
+	font-weight: normal;
+	text-align: center;
+	white-space: nowrap;
+	vertical-align: middle;
+	cursor: pointer;
+	background-image: none;
+	border: 1px solid transparent;
+	border-radius: 4px;
+}
+
+.wrapper {
+	padding: 1em;
+	border: 1px solid #ccc;
+}
+
+/** グラデーション **/
+@-webkit-keyframes colors {
+    0% {background-color: #39f;}
+    15% {background-color: #F246C9;}
+    30% {background-color: #4453F2;}
+    45% {background-color: #44F262;}
+    60% {background-color: #F257D4;}
+    75% {background-color: #EDF255;}
+    90% {background-color: #F20006;}
+    100% {background-color: #39f;}
+}
+@keyframes colors {
+    0% {background-color: #39f;}
+    15% {background-color: #F246C9;}
+    30% {background-color: #4453F2;}
+    45% {background-color: #44F262;}
+    60% {background-color: #F257D4;}
+    75% {background-color: #EDF255;}
+    90% {background-color: #F20006;}
+    100% {background-color: #39f;}
+}
+
+.grad .target {
+	display: inline-block;
+}
+
+.grad .target:after {
+	height: 2px;
+	width: 100%;
+	display: inline-block;
+	content: " ";
+	position: relative;
+	top: -12px;
+	background: -webkit-gradient(linear, left top, right top, color-stop(1%, rgba(0, 0, 0, .3)),
+		color-stop(23%, rgba(0, 0, 0, .1)), color-stop(40%, rgba(255, 231, 87, .1)), color-stop(61%, rgba(255, 231, 87, .2)),
+		color-stop(70%, rgba(255, 231, 87, .1)), color-stop(80%, rgba(0, 0, 0, .1)), color-stop(100%, rgba(0, 0, 0, .25)));
+	-webkit-box-shadow: 0px 0px 15px rgba(255, 255, 255, .2);
+	box-shadow: 0px 0px 15px rgba(255, 255, 255, .2);
+	/* アニメーション設定 */
+	-webkit-animation-direction: normal;
+	-webkit-animation-duration: 5s;
+	-webkit-animation-iteration-count: infinite;
+	-webkit-animation-name: colors;
+	-webkit-animation-timing-function: ease;
+	animation-direction: normal;
+	animation-duration: 5s;
+	animation-iteration-count: infinite;
+	animation-name: colors;
+	animation-timing-function: ease;
+}
+
+.round-grad .target{
+	display: inline-block
+}
+.round-grad .target:before {
+	height: 100%;
+	width: 100%;
+	display: inline-block;
+	content: " ";
+	position: relative;
+	top: -1em;
+	background: -webkit-gradient(linear, left top, right top, color-stop(1%, rgba(0, 0, 0, .3)),
+		color-stop(23%, rgba(0, 0, 0, .1)), color-stop(40%, rgba(255, 231, 87, .1)), color-stop(61%, rgba(255, 231, 87, .2)),
+		color-stop(70%, rgba(255, 231, 87, .1)), color-stop(80%, rgba(0, 0, 0, .1)), color-stop(100%, rgba(0, 0, 0, .25)));
+
+	background: gradient(linear, left top, right top, color-stop(1%, rgba(0, 0, 0, .3)),
+		color-stop(23%, rgba(0, 0, 0, .1)), color-stop(40%, rgba(255, 231, 87, .1)), color-stop(61%, rgba(255, 231, 87, .2)),
+		color-stop(70%, rgba(255, 231, 87, .1)), color-stop(80%, rgba(0, 0, 0, .1)), color-stop(100%, rgba(0, 0, 0, .25)));
+	-webkit-box-shadow: 0px 0px 15px rgba(255, 255, 255, .2);
+	box-shadow: 0px 0px 15px rgba(255, 255, 255, .2);
+	/* アニメーション設定 */
+	-webkit-animation-direction: normal;
+	-webkit-animation-duration: 5s;
+	-webkit-animation-iteration-count: infinite;
+	-webkit-animation-name: colors;
+	-webkit-animation-timing-function: ease;
+}
+
+@-webkit-keyframes slide {
+    0% {left: -34px}
+    100% {left: 62px}
+}
+.grad2 .line{
+	height: 2px;
+	width: 62px;
+	overflow:hidden;
+	position: relative;
+	background-color: #ffffff;
+}
+.grad2 .line .light{
+	position: absolute;
+	height: 2px;
+	width: 16px;
+	background: -webkit-gradient(linear, left top, right top, color-stop(1%, rgba(255, 255, 255, 0)),color-stop(10%, rgba(242, 238, 203, 1)),color-stop(90%, rgba(242, 238, 203, 1)), color-stop(50%, #dec052), color-stop(100%, rgba(255,255,255, 0)));
+	left: -34px;
+	/* アニメーション設定 */
+	-webkit-animation-direction: normal;
+	-webkit-animation-duration: 3s;
+	-webkit-animation-iteration-count: infinite;
+	-webkit-animation-name: slide;
+	-webkit-animation-timing-function: linear;
+}
+
+@-webkit-keyframes size-bound {
+    10% {height: 48px; width: 70px;}
+    20% {height: 32px; width: 54px;}
+    30% {height: 44px; width: 66px;}
+    40% {height: 36px; width: 58px;}
+    50% {height: 40px; width: 62px;}
+    60% {height: 38px; width: 60px;}
+    70% {height: 42px; width: 64px;}
+    80% {height: 39px; width: 59px;}
+    90% {height: 41px; width: 63px;}
+    100% {height: 40px; width: 62px;}
+}
+.size .target {
+	height: 40px;
+	width: 62px;
+	/* アニメーション設定 */
+	-webkit-animation-direction: normal;
+	-webkit-animation-duration: 1s;
+	-webkit-animation-iteration-count: 1;
+	-webkit-animation-name: size-bound;
+	-webkit-animation-timing-function: ease;
+}
+
+.background .target {
+	background: -webkit-gradient(linear, left top, right top, color-stop(1%, rgba(0, 0, 0, .3)),
+		color-stop(23%, rgba(0, 0, 0, .1)), color-stop(40%, rgba(255, 231, 87, .1)), color-stop(61%, rgba(255, 231, 87, .2)),
+		color-stop(70%, rgba(255, 231, 87, .1)), color-stop(80%, rgba(0, 0, 0, .1)), color-stop(100%, rgba(0, 0, 0, .25)));
+	-webkit-box-shadow: 0px 0px 15px rgba(255, 255, 255, .2);
+	box-shadow: 0px 0px 15px rgba(255, 255, 255, .2);
+	/* アニメーション設定 */
+	-webkit-animation-direction: normal;
+	-webkit-animation-duration: 5s;
+	-webkit-animation-iteration-count: infinite;
+	-webkit-animation-name: colors;
+	-webkit-animation-timing-function: ease;
+}
+
+.arrow1 {
+	background-color: #222;
+}
+
+.arrow2 {
+	-webkit-box-shadow: 0px 0px 15px rgba(255, 255, 255, .2);
+	box-shadow: 0px 0px 15px rgba(255, 255, 255, .2);
+	border-radius: 4px;
+	background-color: #222;
+	width: 20px;
+}
+
+.arrow2 .target * {
+	display:inline-block;
+	float: left;
+	height: 20px;
+}
