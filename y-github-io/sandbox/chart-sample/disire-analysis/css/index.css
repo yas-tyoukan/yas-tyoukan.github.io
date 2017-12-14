@@ -8,3 +8,7 @@ body {
 	display: block;
 	padding: .5em 0;
 }
+
+#myChart {
+	max-width: 400px;
+}
