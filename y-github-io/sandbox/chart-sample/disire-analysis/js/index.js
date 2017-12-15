@@ -24,11 +24,11 @@
         '誰とも関わらずに一人で完結する作業より、グループで取り組む作業が好きだ',
         '人から注目されることは気分がいい',
         '一人きりで、すきなことをすきなだけできる時間が欠かせない',
-        'CMやざっでで見た新商品はとりあえずチェックして見たくなる',
+        'CMや雑誌で見た新商品はとりあえずチェックして見たくなる',
         'アクシデントやトラブルのない、安定した人生を歩みたい',
         '自分には直接関係なくても、周囲のケンカを見聞きすると、落ち着かない気分になる',
         '勝負事や競争するゲームでは、つい熱くなる',
-        '細かいマニュアルや人から支持されることが多い仕事は苦手だ',
+        '細かいマニュアルや人から指示されることが多い仕事は苦手だ',
         '未体験のことに取り組むのがすき',
         '自分の体に疲れを感じたら、無理をしないで休養を取るようにする',
         '一人は「自由」というより、「寂しい」という感じがする',
@@ -84,6 +84,7 @@
         var option = {
             type: 'radar',
             options: {
+                events: [],
                 legend: {
                     display: false
                 },
@@ -110,7 +111,6 @@
         var score = getScore();
         var ctx = document.getElementById("myChart").getContext('2d');
         render(ctx, score);
-
 
         var wrapper = document.getElementsByClassName('form-wrapper')[0];
         wrapper.addEventListener('change', function () {
