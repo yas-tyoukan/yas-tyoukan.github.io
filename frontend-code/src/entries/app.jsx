@@ -6,7 +6,7 @@ import App from '~/components/routings/App';
 
 ReactDOM.render(
   <Wrapper rootReducer={{}}>
-    <App/>
+    <App />
   </Wrapper>,
   document.getElementById('root'),
 );

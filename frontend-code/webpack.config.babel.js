@@ -45,10 +45,10 @@ export default (env, args) => {
   return {
     devtool,
     entry: {
-      '../y-github-io/staticpages/index': ['./src/entries/app.jsx'],
+      index: ['./src/entries/app.jsx'],
     },
     output: {
-      path: path.join(__dirname, '../'),
+      path: path.resolve(__dirname, '../y-github-io/staticpages'),
       filename: '[name].js',
     },
     module: { rules },

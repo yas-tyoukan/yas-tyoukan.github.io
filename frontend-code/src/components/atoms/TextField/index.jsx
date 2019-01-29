@@ -32,7 +32,7 @@ export const TextFieldPresenter = ({ ...props }) => <MUITextField {...props} />;
  * @constructor
  */
 const TextField = ({ ...props }) => (
-  <TextFieldContainer {...props} presenter={TextFieldPresenter}/>
+  <TextFieldContainer {...props} presenter={TextFieldPresenter} />
 );
 
 TextField.propTypes = {

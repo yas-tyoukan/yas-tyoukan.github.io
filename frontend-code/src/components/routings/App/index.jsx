@@ -1,22 +1,30 @@
 import React from 'react';
 import {
-  Redirect,
   Route,
   Switch,
 } from 'react-router';
+import { Link } from 'react-router-dom';
 import ReviewForm from '~/components/pages/ReviewForm';
 
 export default () => (
   <Switch>
-    <Redirect exact from="/" to="/top"/>
-    <Route exact path="/top">
-      <span>top</span>
+    <Route path="/review/form">
+      <>
+        <ReviewForm />
+      </>
     </Route>
-    <Route path="/review-form">
-      <ReviewForm/>
-    </Route>
-    <Route path="/*">
-      <div>NOT FOUND</div>
+    <Route path="/">
+      <>
+        <Link to={{ pathname: '/review/form' }}>レビュー</Link>
+        <button
+          type="button"
+          onClick={() => {
+            window.location.reload();
+          }}
+        >
+          更新
+        </button>
+      </>
     </Route>
   </Switch>
 );
