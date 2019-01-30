@@ -40,15 +40,19 @@ export default () => (
             <ApplicantPatternCheckboxes />
           </div>
           <div className="field-wraper star-wrapper">
-            <div className="label">掲載原稿は満足でしたか？</div>
+            <div className="label">希望通りの人の応募がありましたか</div>
             <StarField />
           </div>
           <div className="field-wraper star-wrapper">
-            <div className="label">このプランで期待した採用活動ができましたか？</div>
+            <div className="label">掲載までのスピード</div>
             <StarField />
           </div>
           <div className="field-wraper star-wrapper">
-            <div className="label">このプランは他の人におすすめできますか？</div>
+            <div className="label">原稿のクオリティ</div>
+            <StarField />
+          </div>
+          <div className="field-wraper star-wrapper">
+            <div className="label">フォロー</div>
             <StarField />
           </div>
           <div className="field-wraper">
@@ -57,15 +61,6 @@ export default () => (
               placeholder="この媒体・プランについて、気に入ったこと／気に入らなかったことはなんですか？期待通りの採用活動ができましたか？"
               multiline
               rows={5}
-              type="number"
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-            />
-          </div>
-          <div className="field-wraper">
-            <div className="label">レビュータイトル</div>
-            <TextField
-              placeholder="最も伝えたいポイントはなんですか？"
               type="number"
               InputLabelProps={{ shrink: true }}
               fullWidth
