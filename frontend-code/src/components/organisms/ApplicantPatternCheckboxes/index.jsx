@@ -42,7 +42,7 @@ export default class StarField extends React.PureComponent {
   render() {
     const { selected } = this.state;
     return (
-      <div className="o-applicant-pattern-checkboxes">
+      <div className="o_applicant-pattern-checkboxes">
         {
           patterns.map(({ patterns: p, name: n }) => (
             <div className="pattern-wrapper" key={n}>
