@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="./colorbox/colorbox.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script src="./colorbox/jquery.colorbox.js"></script>
+    <style>
+        .background {
+            height: 3000px;
+            width: 100%;
+            background: linear-gradient(#ffa000, #23527c);
+        }
+
+        .background.in-modal {
+            width: 200px;
+        }
+
+        .background > .modal-contents {
+            display: none;
+        }
+
+        .scroll-wrapper {
+            height: 200px;
+            overflow: scroll;
+            border: 1px solid royalblue;
+        }
+
+        #open-button {
+            height: 50px;
+            font-size: 2em;
+        }
+    </style>
+    <script>
+        function preventDefaultEvent(e) {
+            e.preventDefault();
+        }
+
+        function stopEventPropagation(e) {
+            e.stopPropagation();
+        }
+
+        function onComplete() {
+            $(document.body).css({ overflow: 'hidden' }).on('touchstart touchmove touchend', preventDefaultEvent);
+            $('#colorbox').on('touchstart touchmove touchend', preventDefaultEvent);
+            $('#cboxWrapper').on('touchstart touchmove touchend', stopEventPropagation);
+        }
+
+        function onClosed() {
+            $(document.body).css({ overflow: 'auto' }).off('touchstart touchmove touchend', preventDefaultEvent);
+            $('#colorbox').off('touchstart touchmove touchend', preventDefaultEvent);
+            $('#cboxWrapper').off('touchstart touchmove touchend', stopEventPropagation);
+        }
+
+        $(() => {
+            function openModal() {
+                $.colorbox({
+                    html: $('.modal-contents')[0].innerHTML,
+                    scrolling: false,
+                    fixed: true,
+                    onComplete,
+                    onClosed,
+                });
+            }
+
+            function closeModal() {
+                $.colorbox.close();
+            }
+
+            $('#open-button').on('click', openModal);
+            $('#close-button').on('click', $.colorbox.close);
+        });
+    </script>
+</head>
+<body>
+<div class="background">
+    <button id="open-button" type="button">open</button>
+    <div class="modal-contents">
+        <div class="scroll-wrapper">
+            <div class="background in-modal"></div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
