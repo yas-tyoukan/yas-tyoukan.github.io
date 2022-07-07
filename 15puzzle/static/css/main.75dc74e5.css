@@ -1,0 +1,2 @@
+body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif;margin:0}code{font-family:source-code-pro,Menlo,Monaco,Consolas,Courier New,monospace}.App{display:flex;flex-direction:column}.Board{display:grid;grid-template-columns:50px 50px 50px 50px;margin:auto}.Board-disc{box-sizing:border-box;height:50px;width:50px}.Board-disc.invisible{pointer-events:none;visibility:hidden}
+/*# sourceMappingURL=main.75dc74e5.css.map*/
