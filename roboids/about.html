@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Roboids</title>
+  <style>
+    :root{
+      --bg:#0d1117;
+      --header:#161b22;
+      --muted:#8b949e;
+      --accent:#238636;
+      --card:#0f1720;
+      --text:#e6edf3;
+    }
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;}
+    .lang-buttons button.active{background:var(--accent);color:#fff}
+    main{max-width:900px;margin:auto;padding:24px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border-radius:12px}
+    .meta{color:var(--muted);font-size:13px;margin-bottom:12px}
+    /* シンプルなレスポンシブ */
+    @media (max-width:640px){
+      main{margin:16px;padding:16px}
+      header h1{font-size:16px}
+      .lang-buttons button{padding:6px 10px}
+    }
+    a{
+      color: inherit;
+      text-underline: #fff;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <button id="btn-en" onclick="location.href='https://translate.google.com/translate?sl=ja&tl=en&u=' + encodeURIComponent(location.href)">English</button>
+  <article lang="ja">
+    <h2>Roboids</h2>
+    <p><a href="./">Roboids</a> は、MacintoshのレトロゲームRoboidsを私がwebブラウザ上で再現したゲームです。</p>
+    <p>Roboidsとは、1991年にGlenn Seemann氏がシェアウェアとして作成したMacintoshのゲームであり、著作権はGlenn Seemann氏にあります。</p>
+    <p>webブラウザ版は、私が著作者に無許可で作成したものでありますが、著作権を侵害する意図はなく、非商用目的で楽しむために作成しております。</p>
+    <p>私が子供の頃に楽しんだゲームを、このゲームを知らない方にも楽しんでいただきたいという思いでwebブラウザ版を作成しました。</p>
+    <p>オリジナルのRoboidsの完全再現を目指して作成してはおりますが、オリジナルとは多少異なる部分がございます。ご了承ください。</p>
+    <p>楽しんでいただければ幸いです。</p>
+  </article>
+  <div class="meta">
+    <p>連絡先 <a href="https://x.com/tyoukan__">tyoukan__</a> (twitter)</p>
+  </div>
+  <div class="notice" id="notice" aria-hidden="true"></div>
+</main>
+</body>
+</html>

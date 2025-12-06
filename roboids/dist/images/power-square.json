@@ -1,0 +1,32 @@
+{
+  "frames": {
+    "power-square0.png": {
+      "frame": { "x": 0, "y": 0, "w": 19, "h": 19 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 19, "h": 19 },
+      "sourceSize": { "w": 19, "h": 19 }
+    },
+    "power-square1.png": {
+      "frame": { "x": 19, "y": 0, "w": 19, "h": 19 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 19, "h": 19 },
+      "sourceSize": { "w": 19, "h": 19 }
+    },
+    "power-square2.png": {
+      "frame": { "x": 0, "y": 19, "w": 19, "h": 19 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 19, "h": 19 },
+      "sourceSize": { "w": 19, "h": 19 }
+    }
+  },
+  "meta": {
+    "app": "https://github.com/piskelapp/piskel/",
+    "version": "1.0",
+    "image": "power-square.png",
+    "format": "RGBA8888",
+    "size": { "w": 38, "h": 38 }
+  }
+}

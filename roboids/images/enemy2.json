@@ -1,0 +1,105 @@
+{
+  "frames": {
+    "enemy20.png": {
+      "frame": { "x": 0, "y": 0, "w": 35, "h": 45 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 35, "h": 45 },
+      "sourceSize": { "w": 35, "h": 45 }
+    },
+    "enemy21.png": {
+      "frame": { "x": 35, "y": 0, "w": 35, "h": 45 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 35, "h": 45 },
+      "sourceSize": { "w": 35, "h": 45 }
+    },
+    "enemy22.png": {
+      "frame": { "x": 70, "y": 0, "w": 35, "h": 45 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 35, "h": 45 },
+      "sourceSize": { "w": 35, "h": 45 }
+    },
+    "enemy23.png": {
+      "frame": { "x": 105, "y": 0, "w": 35, "h": 45 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 35, "h": 45 },
+      "sourceSize": { "w": 35, "h": 45 }
+    },
+    "enemy24.png": {
+      "frame": { "x": 0, "y": 45, "w": 35, "h": 45 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 35, "h": 45 },
+      "sourceSize": { "w": 35, "h": 45 }
+    },
+    "enemy25.png": {
+      "frame": { "x": 35, "y": 45, "w": 35, "h": 45 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 35, "h": 45 },
+      "sourceSize": { "w": 35, "h": 45 }
+    },
+    "enemy26.png": {
+      "frame": { "x": 70, "y": 45, "w": 35, "h": 45 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 35, "h": 45 },
+      "sourceSize": { "w": 35, "h": 45 }
+    },
+    "enemy27.png": {
+      "frame": { "x": 105, "y": 45, "w": 35, "h": 45 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 35, "h": 45 },
+      "sourceSize": { "w": 35, "h": 45 }
+    },
+    "enemy28.png": {
+      "frame": { "x": 0, "y": 90, "w": 35, "h": 45 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 35, "h": 45 },
+      "sourceSize": { "w": 35, "h": 45 }
+    },
+    "enemy29.png": {
+      "frame": { "x": 35, "y": 90, "w": 35, "h": 45 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 35, "h": 45 },
+      "sourceSize": { "w": 35, "h": 45 }
+    }
+  },
+  "animations": {
+    "move_right": ["enemy20.png"],
+    "move_left": ["enemy29.png"],
+    "turn_right_to_left": [
+      "enemy21.png",
+      "enemy22.png",
+      "enemy23.png",
+      "enemy24.png",
+      "enemy25.png",
+      "enemy26.png",
+      "enemy27.png",
+      "enemy28.png"
+    ],
+    "turn_left_to_right": [
+      "enemy28.png",
+      "enemy27.png",
+      "enemy26.png",
+      "enemy25.png",
+      "enemy24.png",
+      "enemy23.png",
+      "enemy22.png",
+      "enemy21.png"
+    ]
+  },
+  "meta": {
+    "app": "https://github.com/piskelapp/piskel/",
+    "version": "1.0",
+    "image": "enemy2.png",
+    "format": "RGBA8888",
+    "size": { "w": 140, "h": 135 }
+  }
+}

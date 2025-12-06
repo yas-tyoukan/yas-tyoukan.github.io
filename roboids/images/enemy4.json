@@ -1,0 +1,77 @@
+{
+  "frames": {
+    "enemy40.png": {
+      "frame": { "x": 0, "y": 0, "w": 31, "h": 44 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 31, "h": 44 },
+      "sourceSize": { "w": 31, "h": 44 }
+    },
+    "enemy41.png": {
+      "frame": { "x": 31, "y": 0, "w": 31, "h": 44 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 31, "h": 44 },
+      "sourceSize": { "w": 31, "h": 44 }
+    },
+    "enemy42.png": {
+      "frame": { "x": 62, "y": 0, "w": 31, "h": 44 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 31, "h": 44 },
+      "sourceSize": { "w": 31, "h": 44 }
+    },
+    "enemy43.png": {
+      "frame": { "x": 0, "y": 44, "w": 31, "h": 44 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 31, "h": 44 },
+      "sourceSize": { "w": 31, "h": 44 }
+    },
+    "enemy44.png": {
+      "frame": { "x": 31, "y": 44, "w": 31, "h": 44 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 31, "h": 44 },
+      "sourceSize": { "w": 31, "h": 44 }
+    },
+    "enemy45.png": {
+      "frame": { "x": 62, "y": 44, "w": 31, "h": 44 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 31, "h": 44 },
+      "sourceSize": { "w": 31, "h": 44 }
+    },
+    "enemy46.png": {
+      "frame": { "x": 0, "y": 88, "w": 31, "h": 44 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 31, "h": 44 },
+      "sourceSize": { "w": 31, "h": 44 }
+    }
+  },
+  "animations": {
+    "default": [
+      "enemy40.png",
+      "enemy41.png",
+      "enemy42.png",
+      "enemy43.png",
+      "enemy44.png",
+      "enemy45.png",
+      "enemy46.png",
+      "enemy45.png",
+      "enemy44.png",
+      "enemy43.png",
+      "enemy42.png",
+      "enemy41.png",
+      "enemy40.png"
+    ]
+  },
+  "meta": {
+    "app": "https://github.com/piskelapp/piskel/",
+    "version": "1.0",
+    "image": "enemy4.png",
+    "format": "RGBA8888",
+    "size": { "w": 93, "h": 132 }
+  }
+}

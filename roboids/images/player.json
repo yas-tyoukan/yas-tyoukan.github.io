@@ -1,0 +1,88 @@
+{
+  "frames": {
+    "player00png": {
+      "frame": { "x": 0, "y": 0, "w": 25, "h": 30 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 25, "h": 30 },
+      "sourceSize": { "w": 25, "h": 30 }
+    },
+    "player01png": {
+      "frame": { "x": 25, "y": 0, "w": 25, "h": 30 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 25, "h": 30 },
+      "sourceSize": { "w": 25, "h": 30 }
+    },
+    "player02png": {
+      "frame": { "x": 50, "y": 0, "w": 25, "h": 30 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 25, "h": 30 },
+      "sourceSize": { "w": 25, "h": 30 }
+    },
+    "player03png": {
+      "frame": { "x": 75, "y": 0, "w": 25, "h": 30 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 25, "h": 30 },
+      "sourceSize": { "w": 25, "h": 30 }
+    },
+    "player04png": {
+      "frame": { "x": 0, "y": 30, "w": 25, "h": 30 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 25, "h": 30 },
+      "sourceSize": { "w": 25, "h": 30 }
+    },
+    "player05png": {
+      "frame": { "x": 25, "y": 30, "w": 25, "h": 30 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 25, "h": 30 },
+      "sourceSize": { "w": 25, "h": 30 }
+    },
+    "player06png": {
+      "frame": { "x": 50, "y": 30, "w": 25, "h": 30 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 25, "h": 30 },
+      "sourceSize": { "w": 25, "h": 30 }
+    },
+    "player07png": {
+      "frame": { "x": 75, "y": 30, "w": 25, "h": 30 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 25, "h": 30 },
+      "sourceSize": { "w": 25, "h": 30 }
+    },
+    "player08png": {
+      "frame": { "x": 0, "y": 60, "w": 25, "h": 30 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 25, "h": 30 },
+      "sourceSize": { "w": 25, "h": 30 }
+    },
+    "player09png": {
+      "frame": { "x": 25, "y": 60, "w": 25, "h": 30 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 25, "h": 30 },
+      "sourceSize": { "w": 25, "h": 30 }
+    },
+    "player10.png": {
+      "frame": { "x": 50, "y": 60, "w": 25, "h": 30 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 25, "h": 30 },
+      "sourceSize": { "w": 25, "h": 30 }
+    }
+  },
+  "meta": {
+    "app": "https://github.com/piskelapp/piskel/",
+    "version": "1.0",
+    "image": "player.png",
+    "format": "RGBA8888",
+    "size": { "w": 100, "h": 90 }
+  }
+}

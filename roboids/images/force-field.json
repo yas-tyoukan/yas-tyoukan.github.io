@@ -1,0 +1,53 @@
+{
+  "frames": {
+    "force-field0.png": {
+      "frame": { "x": 0, "y": 0, "w": 11, "h": 6 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 11, "h": 6 },
+      "sourceSize": { "w": 11, "h": 6 }
+    },
+    "force-field1.png": {
+      "frame": { "x": 11, "y": 0, "w": 11, "h": 6 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 11, "h": 6 },
+      "sourceSize": { "w": 11, "h": 6 }
+    },
+    "force-field2.png": {
+      "frame": { "x": 0, "y": 6, "w": 11, "h": 6 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 11, "h": 6 },
+      "sourceSize": { "w": 11, "h": 6 }
+    },
+    "force-field3.png": {
+      "frame": { "x": 11, "y": 6, "w": 11, "h": 6 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 11, "h": 6 },
+      "sourceSize": { "w": 11, "h": 6 }
+    },
+    "force-field4.png": {
+      "frame": { "x": 0, "y": 12, "w": 11, "h": 6 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 11, "h": 6 },
+      "sourceSize": { "w": 11, "h": 6 }
+    },
+    "force-field5.png": {
+      "frame": { "x": 11, "y": 12, "w": 11, "h": 6 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 11, "h": 6 },
+      "sourceSize": { "w": 11, "h": 6 }
+    }
+  },
+  "meta": {
+    "app": "https://github.com/piskelapp/piskel/",
+    "version": "1.0",
+    "image": "force-field.png",
+    "format": "RGBA8888",
+    "size": { "w": 22, "h": 18 }
+  }
+}

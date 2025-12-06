@@ -1,0 +1,60 @@
+{
+  "frames": {
+    "enemy30.png": {
+      "frame": { "x": 0, "y": 0, "w": 23, "h": 42 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 23, "h": 42 },
+      "sourceSize": { "w": 23, "h": 42 }
+    },
+    "enemy31.png": {
+      "frame": { "x": 23, "y": 0, "w": 23, "h": 42 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 23, "h": 42 },
+      "sourceSize": { "w": 23, "h": 42 }
+    },
+    "enemy32.png": {
+      "frame": { "x": 46, "y": 0, "w": 23, "h": 42 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 23, "h": 42 },
+      "sourceSize": { "w": 23, "h": 42 }
+    },
+    "enemy33.png": {
+      "frame": { "x": 0, "y": 42, "w": 23, "h": 42 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 23, "h": 42 },
+      "sourceSize": { "w": 23, "h": 42 }
+    },
+    "enemy34.png": {
+      "frame": { "x": 23, "y": 42, "w": 23, "h": 42 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 23, "h": 42 },
+      "sourceSize": { "w": 23, "h": 42 }
+    }
+  },
+  "animations": {
+    "default": [
+      "enemy30.png",
+      "enemy31.png",
+      "enemy32.png",
+      "enemy33.png",
+      "enemy34.png",
+      "enemy34.png",
+      "enemy33.png",
+      "enemy32.png",
+      "enemy31.png",
+      "enemy30.png"
+    ]
+  },
+  "meta": {
+    "app": "https://github.com/piskelapp/piskel/",
+    "version": "1.0",
+    "image": "enemy3.png",
+    "format": "RGBA8888",
+    "size": { "w": 69, "h": 84 }
+  }
+}

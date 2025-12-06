@@ -1,0 +1,98 @@
+{
+  "frames": {
+    "image0.png": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 27,
+        "h": 42
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 27,
+        "h": 42
+      },
+      "sourceSize": {
+        "w": 27,
+        "h": 42
+      }
+    },
+    "image1.png": {
+      "frame": {
+        "x": 27,
+        "y": 0,
+        "w": 27,
+        "h": 42
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 27,
+        "h": 42
+      },
+      "sourceSize": {
+        "w": 27,
+        "h": 42
+      }
+    },
+    "image2.png": {
+      "frame": {
+        "x": 0,
+        "y": 42,
+        "w": 27,
+        "h": 42
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 27,
+        "h": 42
+      },
+      "sourceSize": {
+        "w": 27,
+        "h": 42
+      }
+    },
+    "image3.png": {
+      "frame": {
+        "x": 27,
+        "y": 42,
+        "w": 27,
+        "h": 42
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 27,
+        "h": 42
+      },
+      "sourceSize": {
+        "w": 27,
+        "h": 42
+      }
+    }
+  },
+  "animations": {
+    "right": ["image0.png", "image1.png", "image2.png", "image3.png"],
+    "left": ["image0.png", "image3.png", "image2.png", "image1.png"]
+  },
+  "meta": {
+    "app": "https://github.com/piskelapp/piskel/",
+    "version": "1.0",
+    "image": "enemy5.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 54,
+      "h": 84
+    }
+  }
+}
