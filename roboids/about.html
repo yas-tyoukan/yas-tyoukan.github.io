@@ -14,7 +14,6 @@
       --text:#e6edf3;
     }
     html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;}
-    .lang-buttons button.active{background:var(--accent);color:#fff}
     main{max-width:900px;margin:auto;padding:24px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border-radius:12px}
     .meta{color:var(--muted);font-size:13px;margin-bottom:12px}
     /* シンプルなレスポンシブ */
@@ -27,24 +26,38 @@
       color: inherit;
       text-underline: #fff;
     }
+    article+article{
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
 <main>
-  <button id="btn-en" onclick="location.href='https://translate.google.com/translate?sl=ja&tl=en&u=' + encodeURIComponent(location.href)">English</button>
+  <div class="meta">There is an English version below.</div>
   <article lang="ja">
     <h2>Roboids</h2>
     <p><a href="./">Roboids</a> は、MacintoshのレトロゲームRoboidsを私がwebブラウザ上で再現したゲームです。</p>
     <p>Roboidsとは、1991年にGlenn Seemann氏がシェアウェアとして作成したMacintoshのゲームであり、著作権はGlenn Seemann氏にあります。</p>
     <p>webブラウザ版は、私が著作者に無許可で作成したものでありますが、著作権を侵害する意図はなく、非商用目的で楽しむために作成しております。</p>
-    <p>私が子供の頃に楽しんだゲームを、このゲームを知らない方にも楽しんでいただきたいという思いでwebブラウザ版を作成しました。</p>
+    <p>私が子供の頃に楽しんだゲームを、このゲームを知らない方や、昔プレイした方にも楽しんでいただきたいという思いでwebブラウザ版を作成しました。</p>
     <p>オリジナルのRoboidsの完全再現を目指して作成してはおりますが、オリジナルとは多少異なる部分がございます。ご了承ください。</p>
     <p>楽しんでいただければ幸いです。</p>
+    <div class="meta">
+      <p>連絡先 <a href="https://x.com/tyoukan__">tyoukan__</a> (twitter)</p>
+    </div>
   </article>
-  <div class="meta">
-    <p>連絡先 <a href="https://x.com/tyoukan__">tyoukan__</a> (twitter)</p>
-  </div>
-  <div class="notice" id="notice" aria-hidden="true"></div>
+  <article lang="en">
+    <h2>Roboids</h2>
+    <p><a href="./">Roboids</a> is a game that I recreated on a web browser from the retro Macintosh game Roboids.</p>
+    <p>Roboids is a Macintosh game created as shareware by Glenn Seemann in 1991, and is copyrighted by Glenn Seemann.</p>
+    <p>The web browser version was created by me without permission from the author, but I have no intention of infringing copyright and have created it for non-commercial enjoyment.</p>
+    <p>I created a web browser version of a game I was really into as a child, hoping that people who don’t know this game or who played it in the past would be able to enjoy it as well.</p>
+    <p>I have created this product with the aim of perfectly recreating the original Roboids, but please note that there may be some differences from the original.</p>
+    <p>I hope you enjoy it.</p>
+    <div class="meta">
+      <p>Contact <a href="https://x.com/tyoukan__">tyoukan__</a> (twitter)</p>
+    </div>
+  </article>
 </main>
 </body>
 </html>
