@@ -29,7 +29,7 @@
     "@storybook/addon-notes": "^4.1.11",
     "@storybook/addon-viewport": "^4.1.11",
     "@storybook/cli": "^4.1.11",
-    "@storybook/react": "^4.1.11",
+    "@storybook/react": "^10.0.7",
     "babel-eslint": "^10.0.1",
     "babel-loader": "^8.0.4",
     "babel-preset-env": "^1.7.0",
@@ -50,7 +50,7 @@
     "webpack-cli": "^3.1.2"
   },
   "devDependencies": {
-    "eslint": "^5.11.0",
+    "eslint": "^9.39.1",
     "eslint-config-airbnb": "^17.1.0",
     "eslint-import-resolver-webpack": "^0.10.1",
     "eslint-loader": "^2.1.1",
