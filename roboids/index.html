@@ -76,8 +76,16 @@
       border: 1px solid #000;
       image-rendering: pixelated;
     }
+    @media (max-width: 513px) {
+      canvas {
+        box-sizing: border-box;
+        max-width: 100%;
+        /* Pixiがstyle属性にpx指定の高さを書くため、!importantで上書きして縦横比を維持する */
+        height: auto !important;
+      }
+    }
   </style>
-  <script type="module" crossorigin src="./assets/main-jKiRvNm-.js"></script>
+  <script type="module" crossorigin src="./assets/main-DYjl2LPq.js"></script>
 </head>
 <body>
 <header>
